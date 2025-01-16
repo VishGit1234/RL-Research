@@ -1,26 +1,9 @@
-import mujoco
-import os
-import mujoco.viewer
 import random
+from mujoco_env import MujocoEnv
+import numpy as np
 
-model = mujoco.MjModel.from_xml_path(os.path.join('kinova_gen3', 'scene.xml'))
-data = mujoco.MjData(model)
-# renderer = mujoco.Renderer(model)
+env = MujocoEnv()
+env.reset()
 
-with mujoco.viewer.launch_passive(model, data) as viewer:
-  T = 10000
-  # simulate
-  for t in range(T - 1):
-    print(data.ctrl)
-    
-    # step
-
-    # get control
-
-    data.ctrl = [1 - 2*random.random() for i in range(7)]
-
-    mujoco.mj_step(model, data)
-    # renderer.update_scene(data)
-    # pixels = renderer.render()
-
-    viewer.sync()
+for i in range(10000):
+  o, r, done, truncated, info = env.step(np.array([1 - random.random()*2 for i in range(7)]))
