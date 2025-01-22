@@ -1,5 +1,5 @@
 import random
-from mujoco_env import MujocoEnv
+from tdmpc2.mujoco_env import MujocoEnv
 import numpy as np
 
 env = MujocoEnv()

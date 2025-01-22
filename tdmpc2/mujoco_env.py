@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import mujoco
+from mujoco import viewer
 import gymnasium as gym
 import random
 

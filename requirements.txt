@@ -1,2 +1,9 @@
 mujoco
 gymnasium
+numpy
+torch
+tensordict
+termcolor
+packaging
+torchrl
+pandas
