@@ -1,9 +1,8 @@
-import random
-from tdmpc2.mujoco_env import MujocoEnv
-import numpy as np
+import sys
+import os
+sys.path.append(os.path.abspath("./tdmpc2"))
+from tdmpc2.train import train
 
-env = MujocoEnv()
-env.reset()
+if __name__ == '__main__':
 
-for i in range(10000):
-  o, r, done, truncated, info = env.step(np.array([1 - random.random()*2 for i in range(7)]))
+  train("config.yaml")

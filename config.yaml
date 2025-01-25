@@ -8,7 +8,7 @@ obs: state
 # evaluation
 checkpoint: ???
 eval_episodes: 10
-eval_freq: 50000
+eval_freq: 500
 
 # training
 steps: 10_000_000
@@ -17,7 +17,7 @@ reward_coef: 0.1
 value_coef: 0.1
 consistency_coef: 20
 rho: 0.5
-lr: 3e-4
+lr: 3.0e-4
 enc_lr_scale: 0.3
 grad_clip_norm: 20
 tau: 0.01
@@ -42,7 +42,7 @@ temperature: 0.5
 # actor
 log_std_min: -10
 log_std_max: 2
-entropy_coef: 1e-4
+entropy_coef: 1.0e-4
 
 # critic
 num_bins: 101
@@ -56,7 +56,7 @@ enc_dim: 256
 num_channels: 32
 mlp_dim: 512
 latent_dim: 512
-task_dim: 96
+task_dim: 0
 num_q: 5
 dropout: 0.01
 simnorm_dim: 8

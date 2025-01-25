@@ -105,15 +105,15 @@ class Logger:
 
 	def __init__(self, cfg):
 		self._log_dir = make_dir(cfg.work_dir)
-		self._model_dir = make_dir(self._log_dir / "models")
+		self._model_dir = make_dir(self._log_dir + "/models")
 		self._save_csv = cfg.save_csv
 		self._save_agent = cfg.save_agent
 		self._group = cfg_to_group(cfg)
 		self._seed = cfg.seed
 		self._eval = []
 		print_run(cfg)
-		self.project = cfg.get("wandb_project", "none")
-		self.entity = cfg.get("wandb_entity", "none")
+		self.project = "none"
+		self.entity = "none"
 		if not cfg.enable_wandb or self.project == "none" or self.entity == "none":
 			print(colored("Wandb disabled.", "blue", attrs=["bold"]))
 			cfg.save_agent = False

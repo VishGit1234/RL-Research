@@ -7,3 +7,4 @@ termcolor
 packaging
 torchrl
 pandas
+pyyaml

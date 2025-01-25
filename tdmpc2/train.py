@@ -13,9 +13,10 @@ from termcolor import colored
 from common.parser import parse_cfg
 from common.seed import set_seed
 from common.buffer import Buffer
-from mujoco_env import MujocoEnv
-import tdmpc2
+from tdmpc2.envs.mujoco_env import MujocoEnv
+from .tdmpc2 import TDMPC2
 from trainer.online_trainer import OnlineTrainer
+from envs import make_env
 from common.logger import Logger
 from tensor import TensorWrapper
 
@@ -23,7 +24,7 @@ from tensor import TensorWrapper
 torch.backends.cudnn.benchmark = True
 torch.set_float32_matmul_precision('high')
 
-
+@parse_cfg
 def train(cfg: dict):
 	"""
 	Script for training single-task / multi-task TD-MPC2 agents.
@@ -43,23 +44,18 @@ def train(cfg: dict):
 		$ python train.py task=dog-run steps=7000000
 	```
 	"""
-	assert torch.cuda.is_available()
+	# assert torch.cuda.is_available()
 	assert cfg.steps > 0, 'Must train for at least 1 step.'
-	cfg = parse_cfg(cfg)
 	set_seed(cfg.seed)
 	print(colored('Work dir:', 'green', attrs=['bold']), cfg.work_dir)
 
 	trainer_cls = OnlineTrainer
 	trainer = trainer_cls(
 		cfg=cfg,
-		env=TensorWrapper(MujocoEnv(cfg)),
+		env=make_env(cfg),
 		agent=TDMPC2(cfg),
 		buffer=Buffer(cfg),
 		logger=Logger(cfg),
 	)
 	trainer.train()
 	print('\nTraining completed successfully')
-
-
-if __name__ == '__main__':
-	train(os.path.join(os.path.abspath(".."), "config.yaml"))
