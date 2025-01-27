@@ -104,8 +104,8 @@ class Logger:
 	"""Primary logging object. Logs either locally or using wandb."""
 
 	def __init__(self, cfg):
-		self._log_dir = make_dir(cfg.work_dir)
-		self._model_dir = make_dir(self._log_dir + "/models")
+		self._log_dir = os.path.abspath(make_dir(cfg.work_dir))
+		self._model_dir = make_dir(os.path.join(self._log_dir, "/models"))
 		self._save_csv = cfg.save_csv
 		self._save_agent = cfg.save_agent
 		self._group = cfg_to_group(cfg)
@@ -202,7 +202,8 @@ class Logger:
 		if category == "eval" and self._save_csv:
 			keys = ["step", "episode_reward"]
 			self._eval.append(np.array([d[keys[0]], d[keys[1]]]))
+			print(self._log_dir)
 			pd.DataFrame(np.array(self._eval)).to_csv(
-				self._log_dir / "eval.csv", header=keys, index=None
+				os.path.join(self._log_dir, "eval.csv"), header=keys, index=None
 			)
 		self._print(d, category)

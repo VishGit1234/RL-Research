@@ -15,14 +15,27 @@ class MujocoEnv(gymnasium.Env):
     # should be an numpy array
     self.timestep = 0
     self.done = False
+    self.cfg = kwargs['cfg']
 
     self.goal = MujocoEnv._generate_goal()
+
     self.max_episode_steps = 1000000
 
-    self.action_space = Box(-3.4028234663852886e+38, 3.4028234663852886e+38, (7,), np.float32)
+    self.action_space = Box(-0.1, 0.1, (7,), np.float32)
     self.observation_space = Box(-np.inf, np.inf, (17,), np.float32)
 
-    self.viewer = mujoco.viewer.launch_passive(self.model, self.sim)
+    if self.cfg.viewer:
+      self.viewer = mujoco.viewer.launch_passive(self.model, self.sim)
+      i = self.viewer.user_scn.ngeom
+      mujoco.mjv_initGeom(
+        self.viewer.user_scn.geoms[i],
+        type=mujoco.mjtGeom.mjGEOM_SPHERE,
+        size=[0.02, 0, 0],
+        pos=self.goal,
+        mat=np.eye(3).flatten(),
+        rgba=np.array([0, 1, 0, 2])
+      )
+      self.viewer.user_scn.ngeom = i + 1
   
   def _generate_goal():
     MIN_RADIUS = 0.4
@@ -37,12 +50,12 @@ class MujocoEnv(gymnasium.Env):
     self.timestep += 1
 
     # Apply the action to the environment
-    self.sim.ctrl[:] = action
+    self.sim.ctrl[:] = action # np.zeros(action.shape)
     mujoco.mj_step(self.model, self.sim)
 
     # Get the observation, reward, done, and info
     observation = self._get_observation()
-    reward = self._get_reward()
+    reward = self._get_reward(action)
     # done = self._get_done()
     done = False
     self.done = done
@@ -50,7 +63,7 @@ class MujocoEnv(gymnasium.Env):
     info = {}
 
     # update viewer
-    self.viewer.sync()
+    if self.cfg.viewer: self.viewer.sync()
 
     if self.timestep > 1000:
       done = True
@@ -61,17 +74,18 @@ class MujocoEnv(gymnasium.Env):
   def reset(self):
     # Reset MuJoCo
     mujoco.mj_resetData(self.model, self.sim)
-    mujoco.mj_forward(self.model, self.sim)
 
     self.timestep = 0
     self.done = False
 
     # Get observation 
     self.goal = MujocoEnv._generate_goal()
-    mujoco.mj_forward(self.model, self.sim)
     
     obs = self._get_observation()
     reset_info = {}  # This can be populated with any reset-specific info if needed
+
+    # update viewer
+    if self.cfg.viewer: self.viewer.sync()
 
     return obs
 
@@ -90,12 +104,16 @@ class MujocoEnv(gymnasium.Env):
     
     return observation
 
-  def _get_reward(self):
+  def _get_reward(self, action):
     # reward function
     # euclidian distance between goal point and bracelet_with_vision_link which is the end of the arm
     cur_pos = self.sim.site_xpos[-1]
     # print(f"current_pos: {cur_pos}")
-
     dist = np.linalg.norm(self.goal - cur_pos)
+
+    # # minimize actuator movement (mean squared average of actuator movement)
+    # msa = np.mean(np.square(action))
+
+    # reward = np.clip(-dist - msa, -1000, 1000)
 
     return -dist

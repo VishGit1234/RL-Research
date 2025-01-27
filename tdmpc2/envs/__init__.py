@@ -14,7 +14,7 @@ def make_env(cfg):
 	Make an environment for TD-MPC2 experiments.
 	"""
 	gymnasium.logger.min_level = 40
-	env = MujocoEnv()
+	env = MujocoEnv(cfg=cfg)
 
 	if env is None:
 		raise ValueError(f'Failed to make environment "{cfg.task}": please verify that dependencies are installed and that the task exists.')

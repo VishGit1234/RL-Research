@@ -1,0 +1,12 @@
+version: "3.8"
+
+services:
+  rl_research:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: rl-research:latest
+    # command: /bin/bash -c "python -u main.py"
+    command: tail -f /dev/null
+    volumes:
+      - .:/home/rl_research

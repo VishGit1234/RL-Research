@@ -13,12 +13,10 @@ from termcolor import colored
 from common.parser import parse_cfg
 from common.seed import set_seed
 from common.buffer import Buffer
-from tdmpc2.envs.mujoco_env import MujocoEnv
 from .tdmpc2 import TDMPC2
 from trainer.online_trainer import OnlineTrainer
 from envs import make_env
 from common.logger import Logger
-from tensor import TensorWrapper
 
 
 torch.backends.cudnn.benchmark = True
@@ -50,6 +48,7 @@ def train(cfg: dict):
 	print(colored('Work dir:', 'green', attrs=['bold']), cfg.work_dir)
 
 	trainer_cls = OnlineTrainer
+	torch.autograd.set_detect_anomaly(True)
 	trainer = trainer_cls(
 		cfg=cfg,
 		env=make_env(cfg),

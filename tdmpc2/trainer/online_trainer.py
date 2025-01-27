@@ -5,6 +5,7 @@ import torch
 from tensordict.tensordict import TensorDict
 from trainer.base import Trainer
 
+from timeit import default_timer
 
 class OnlineTrainer(Trainer):
 	"""Trainer class for single-task online TD-MPC2 training."""
@@ -32,7 +33,9 @@ class OnlineTrainer(Trainer):
 				self.logger.video.init(self.env, enabled=(i==0))
 			while not done:
 				torch.compiler.cudagraph_mark_step_begin()
+				# tim = default_timer()
 				action = self.agent.act(obs, t0=t==0, eval_mode=True)
+				# print(default_timer() - tim)
 				obs, reward, done, info = self.env.step(action)
 				ep_reward += reward
 				t += 1
