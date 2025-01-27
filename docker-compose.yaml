@@ -6,7 +6,6 @@ services:
       context: .
       dockerfile: Dockerfile
     image: rl-research:latest
-    # command: /bin/bash -c "python -u main.py"
-    command: tail -f /dev/null
+    command: /bin/bash -c "python -u main.py"
     volumes:
       - .:/home/rl_research
