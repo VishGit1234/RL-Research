@@ -83,7 +83,7 @@ obs_shapes: ???
 action_dims: ???
 episode_lengths: ???
 seed_steps: ???
-bin_size: ???
+bin_size: 0.01
 
 # speedups
 compile: False
