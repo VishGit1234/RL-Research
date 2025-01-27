@@ -21,7 +21,7 @@ class MujocoEnv(gymnasium.Env):
 
     self.max_episode_steps = 1000000
 
-    self.action_space = Box(-0.1, 0.1, (7,), np.float32)
+    self.action_space = Box(-0.75, 0.75, (7,), np.float32)
     self.observation_space = Box(-np.inf, np.inf, (17,), np.float32)
 
     if self.cfg.viewer:
