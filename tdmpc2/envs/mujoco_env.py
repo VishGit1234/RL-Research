@@ -19,7 +19,7 @@ class MujocoEnv(gymnasium.Env):
 
     self.goal = MujocoEnv._generate_goal()
 
-    self.max_episode_steps = 1000000
+    self.max_episode_steps = 10000
 
     self.action_space = Box(-0.75, 0.75, (7,), np.float32)
     self.observation_space = Box(-np.inf, np.inf, (17,), np.float32)
