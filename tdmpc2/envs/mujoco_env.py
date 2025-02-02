@@ -19,7 +19,7 @@ class MujocoEnv(gymnasium.Env):
 
     self.goal = MujocoEnv._generate_goal()
 
-    self.max_episode_steps = 10000
+    self.max_episode_steps = 100
 
     self.action_space = Box(-0.75, 0.75, (7,), np.float32)
     self.observation_space = Box(-np.inf, np.inf, (17,), np.float32)
@@ -65,7 +65,7 @@ class MujocoEnv(gymnasium.Env):
     # update viewer
     if self.cfg.viewer: self.viewer.sync()
 
-    if self.timestep > 1000:
+    if self.timestep > self.max_episode_steps:
       done = True
       self.done = True
 
@@ -116,4 +116,4 @@ class MujocoEnv(gymnasium.Env):
 
     # reward = np.clip(-dist - msa, -1000, 1000)
 
-    return -dist
+    return -dist * 200

@@ -1,7 +1,7 @@
 # environment
 task: dog-run
 obs: state
-viewer: false
+viewer: true
 
 # evaluation
 checkpoint: ???
@@ -49,11 +49,11 @@ vmax: 0
 
 # architecture
 model_size: ???
-num_enc_layers: 2
+num_enc_layers: 1
 enc_dim: 128
 num_channels: 32
-mlp_dim: 256
-latent_dim: 256
+mlp_dim: 32
+latent_dim: 32
 task_dim: 0
 num_q: 5
 dropout: 0.01
