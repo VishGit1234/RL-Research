@@ -43,9 +43,9 @@ log_std_max: 2
 entropy_coef: 1.0e-4
 
 # critic
-num_bins: 101
-vmin: -10
-vmax: +10
+num_bins: 600
+vmin: -6
+vmax: 0
 
 # architecture
 model_size: ???
