@@ -104,8 +104,8 @@ class Logger:
 	"""Primary logging object. Logs either locally or using wandb."""
 
 	def __init__(self, cfg):
-		self._log_dir = os.path.abspath(make_dir(cfg.work_dir))
-		self._model_dir = make_dir(os.path.join(self._log_dir, "/models"))
+		self._log_dir = make_dir(os.path.abspath(cfg.work_dir))
+		self._model_dir = make_dir(os.path.join(self._log_dir, "models"))
 		self._save_csv = cfg.save_csv
 		self._save_agent = cfg.save_agent
 		self._group = cfg_to_group(cfg)
