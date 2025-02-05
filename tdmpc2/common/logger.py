@@ -77,7 +77,7 @@ class VideoRecorder:
 
 	def __init__(self, cfg, wandb, fps=15):
 		self.cfg = cfg
-		self._save_dir = make_dir(cfg.work_dir / 'eval_video')
+		self._save_dir = make_dir(os.path.join(cfg.work_dir, 'eval_video'))
 		self._wandb = wandb
 		self.fps = fps
 		self.frames = []
@@ -116,7 +116,7 @@ class Logger:
 		self.entity = "none"
 		if not cfg.enable_wandb or self.project == "none" or self.entity == "none":
 			print(colored("Wandb disabled.", "blue", attrs=["bold"]))
-			cfg.save_agent = False
+			# cfg.save_agent = False
 			cfg.save_video = False
 			self._wandb = None
 			self._video = None
@@ -151,7 +151,7 @@ class Logger:
 
 	def save_agent(self, agent=None, identifier='final'):
 		if self._save_agent and agent:
-			fp = self._model_dir / f'{str(identifier)}.pt'
+			fp = os.path.join(self._model_dir, f'{str(identifier)}.pt')
 			agent.save(fp)
 			if self._wandb:
 				artifact = self._wandb.Artifact(
