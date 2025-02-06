@@ -17,9 +17,9 @@ class MujocoEnv(gymnasium.Env):
     self.done = False
     self.cfg = kwargs['cfg']
 
-    self.goal = MujocoEnv._generate_goal()
+    self.goal = self._generate_goal()
 
-    self.max_episode_steps = 100
+    self.max_episode_steps = 1000
 
     self.action_space = Box(-0.75, 0.75, (7,), np.float32)
     self.observation_space = Box(-np.inf, np.inf, (17,), np.float32)
@@ -37,7 +37,7 @@ class MujocoEnv(gymnasium.Env):
       )
       self.viewer.user_scn.ngeom = i + 1
   
-  def _generate_goal():
+  def _generate_goal(self):
     MIN_RADIUS = 0.4
     MAX_RADIUS = 0.8
 
@@ -79,16 +79,35 @@ class MujocoEnv(gymnasium.Env):
     self.done = False
 
     # Get observation 
-    self.goal = MujocoEnv._generate_goal()
+    self._delete_goal_sphere()
+    self.goal = self._generate_goal()
     
     obs = self._get_observation()
     reset_info = {}  # This can be populated with any reset-specific info if needed
 
     # update viewer
-    if self.cfg.viewer: self.viewer.sync()
+    if self.cfg.viewer: 
+      self.viewer.sync()
+      i = self.viewer.user_scn.ngeom
+      mujoco.mjv_initGeom(
+        self.viewer.user_scn.geoms[i],
+        type=mujoco.mjtGeom.mjGEOM_SPHERE,
+        size=[0.02, 0, 0],
+        pos=self.goal,
+        mat=np.eye(3).flatten(),
+        rgba=np.array([0, 1, 0, 2])
+      )
+      self.viewer.user_scn.ngeom = i + 1
 
     return obs
 
+  def _delete_goal_sphere(self):
+    for i in range(self.viewer.user_scn.ngeom):
+        geom = self.viewer.user_scn.geoms[i]
+        if np.allclose(geom.rgba, [0, 1, 0, 2]): 
+            geom.rgba[3] = 0
+            break 
+        
   def _get_observation(self):
     # Joint positions
     qpos = self.sim.qpos
