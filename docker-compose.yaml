@@ -7,5 +7,16 @@ services:
       dockerfile: Dockerfile
     image: rl-research:latest
     command: /bin/bash -c "python -u main.py"
+    # command: tail -f /dev/null
     volumes:
+      # - ./log:/home/rl_research/log
       - .:/home/rl_research
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
