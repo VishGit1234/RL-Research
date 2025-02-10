@@ -79,7 +79,7 @@ class MujocoEnv(gymnasium.Env):
     self.done = False
 
     # Get observation 
-    self._delete_goal_sphere()
+    if self.cfg.viewer: self._delete_goal_sphere()
     self.goal = self._generate_goal()
     
     obs = self._get_observation()
