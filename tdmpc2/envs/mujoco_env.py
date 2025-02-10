@@ -19,7 +19,7 @@ class MujocoEnv(gymnasium.Env):
 
     self.goal = self._generate_goal()
 
-    self.max_episode_steps = 1000
+    self.max_episode_steps = self.cfg.max_episode_steps
 
     self.action_space = Box(-0.75, 0.75, (7,), np.float32)
     self.observation_space = Box(-np.inf, np.inf, (17,), np.float32)
@@ -70,9 +70,9 @@ class MujocoEnv(gymnasium.Env):
       done = True
       self.done = True
 
-    return observation, reward, done, info
+    return observation, reward, done, truncated, info
 
-  def reset(self):
+  def reset(self, **kwargs):
     # Reset MuJoCo
     mujoco.mj_resetData(self.model, self.sim)
 
@@ -90,7 +90,7 @@ class MujocoEnv(gymnasium.Env):
     if self.cfg.viewer: 
       self.viewer.sync()
 
-    return obs
+    return obs, {}
         
   def _get_observation(self):
     # Joint positions
