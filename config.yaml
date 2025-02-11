@@ -5,14 +5,14 @@ viewer: false
 
 # evaluation
 checkpoint: ???
-eval_episodes: 2
+eval_episodes: 10
 eval_freq: 50000
 
 # training
-steps: 2000000
+steps: 20000000
 batch_size: 256
-update_freq: 6000
-num_envs: 2
+update_freq: 2000
+num_envs: 10
 max_episode_steps: 200
 reward_coef: 0.1
 value_coef: 0.1
@@ -25,7 +25,7 @@ tau: 0.01
 discount_denom: 5
 discount_min: 0.95
 discount_max: 0.995
-buffer_size: 50000
+buffer_size: 500000
 exp_name: default
 data_dir: ./log/data/
 
@@ -52,15 +52,15 @@ vmax: 0
 
 # architecture
 model_size: ???
-num_enc_layers: 1
-enc_dim: 128
+num_enc_layers: 0
+enc_dim: 12
 num_channels: 32
-mlp_dim: 32
-latent_dim: 32
+mlp_dim: 8
+latent_dim: 8
 task_dim: 0
 num_q: 5
 dropout: 0.01
-simnorm_dim: 8
+simnorm_dim: 4
 
 # logging
 wandb_project: ???
@@ -85,7 +85,8 @@ episode_length: ???
 obs_shapes: ???
 action_dims: ???
 episode_lengths: ???
-seed_steps: 50000
+seed_steps: 500000
+seed_updates: 50000
 bin_size: 0.01
 
 # speedups

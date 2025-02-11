@@ -101,14 +101,14 @@ class OnlineTrainer(Trainer):
 			# Update agent
 			if self._step >= self.cfg.seed_steps and self._step % self.cfg.update_freq == 0:
 				if self._step == self.cfg.seed_steps:
-					num_updates = self.cfg.seed_steps
+					num_updates = self.cfg.seed_updates # self.cfg.seed_steps
 					print('Pretraining agent on seed data...')
 				else:
 					num_updates = 1
 				for _ in range(num_updates):
 					_train_metrics = self.agent.update(self.buffer)
 				train_metrics.update(_train_metrics)
-				self.logger.log(train_metrics, 'train')
+				# self.logger.log(train_metrics, 'train')
 
 			self._step += self.cfg.num_envs
 
