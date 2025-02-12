@@ -35,6 +35,7 @@ class MujocoEnv(gymnasium.Env):
         mat=np.eye(3).flatten(),
         rgba=np.array([0, 1, 0, 2])
       )
+      self._geom_id = i
       self.viewer.user_scn.ngeom = i + 1
   
   def _generate_goal(self):
@@ -79,8 +80,8 @@ class MujocoEnv(gymnasium.Env):
     self.done = False
 
     # Get observation 
-    if self.cfg.viewer: self._delete_goal_sphere()
     self.goal = self._generate_goal()
+    self.viewer.user_scn.geoms[self._geom_id].pos[:] = self.goal
     
     obs = self._get_observation()
     reset_info = {}  # This can be populated with any reset-specific info if needed
@@ -88,25 +89,8 @@ class MujocoEnv(gymnasium.Env):
     # update viewer
     if self.cfg.viewer: 
       self.viewer.sync()
-      i = self.viewer.user_scn.ngeom
-      mujoco.mjv_initGeom(
-        self.viewer.user_scn.geoms[i],
-        type=mujoco.mjtGeom.mjGEOM_SPHERE,
-        size=[0.02, 0, 0],
-        pos=self.goal,
-        mat=np.eye(3).flatten(),
-        rgba=np.array([0, 1, 0, 2])
-      )
-      self.viewer.user_scn.ngeom = i + 1
 
     return obs
-
-  def _delete_goal_sphere(self):
-    for i in range(self.viewer.user_scn.ngeom):
-        geom = self.viewer.user_scn.geoms[i]
-        if np.allclose(geom.rgba, [0, 1, 0, 2]): 
-            geom.rgba[3] = 0
-            break 
         
   def _get_observation(self):
     # Joint positions
