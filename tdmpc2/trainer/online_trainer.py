@@ -104,7 +104,7 @@ class OnlineTrainer(Trainer):
 					num_updates = self.cfg.seed_updates # self.cfg.seed_steps
 					print('Pretraining agent on seed data...')
 				else:
-					num_updates = 1
+					num_updates = self.cfg.updates
 				for _ in range(num_updates):
 					_train_metrics = self.agent.update(self.buffer)
 				train_metrics.update(_train_metrics)

@@ -119,4 +119,4 @@ class MujocoEnv(gymnasium.Env):
 
     # reward = np.clip(-dist - msa, -1000, 1000)
 
-    return -dist * 200
+    return 1 - np.tanh(5*dist)

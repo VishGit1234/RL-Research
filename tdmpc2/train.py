@@ -47,6 +47,8 @@ def train(cfg: dict):
 	set_seed(cfg.seed)
 	print(colored('Work dir:', 'green', attrs=['bold']), cfg.work_dir)
 
+	cfg.bin_size = (cfg.vmax - cfg.vmin) / cfg.num_bins
+
 	trainer_cls = OnlineTrainer
 	torch.autograd.set_detect_anomaly(True)
 	trainer = trainer_cls(
