@@ -253,7 +253,12 @@ class TDMPC2(torch.nn.Module):
 	def _update(self, obs, action, reward, task=None):
 		# Compute targets
 		with torch.no_grad():
+			# o', o'',..., o^T+1 -> z', z'',..., z^T+1
+			# clearly length is T 
 			next_z = self.model.encode(obs[1:], task)
+			# this is our target q-value for t=0, t=1,..., t=T
+			# this is because in our bootstrapping we do ...
+			# q^t = r^t + discount * Q(z^t+1, pi(z^t+1))
 			td_targets = self._td_target(next_z, reward, task)
 
 		# Prepare for update
@@ -262,15 +267,27 @@ class TDMPC2(torch.nn.Module):
 		# Latent rollout
 		zs = torch.empty(self.cfg.horizon+1, self.cfg.batch_size, self.cfg.latent_dim, device=self.device)
 		z = self.model.encode(obs[0], task)
-		zs[0] = z
+		zs[0] = z # This is z (computed from initial observation)
 		consistency_loss = 0
+		# next_z is z', z'',..., z^T+1 <- actual z values
+		# action is a, a',..., a^T
 		for t, (_action, _next_z) in enumerate(zip(action.unbind(0), next_z.unbind(0))):
+			# predict next state given action and current state from buffer
+			# gives predicted z^t+1 from z^t and a^t
 			z = self.model.next(z, _action, task)
+			# add to consistency loss for this timestep
+			# difference in actual latent state and predicted latent state
 			consistency_loss = consistency_loss + F.mse_loss(z, _next_z) * self.cfg.rho**t
 			zs[t+1] = z
 
 		# Predictions
+		# zs contains z, z', z'',..., z^T+1 where every value is predicted except z
+		# in _zs we don't include the last value z^T+1 since there is no corresponding action
 		_zs = zs[:-1]
+		# Q-values and reward predictions
+		# gives q^t, q^t+1, q^t+2,..., q^T
+		# where q^t = Q(z^t, a^t), q^t+1 = Q(z^t+1, a^t+1),...
+		# note: z here is the predicted z from previous z and a 
 		qs = self.model.Q(_zs, action, task, return_type='all')
 		reward_preds = self.model.reward(_zs, action, task)
 
