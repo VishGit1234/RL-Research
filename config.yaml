@@ -11,9 +11,9 @@ eval_freq: 50000
 # training
 steps: 10000000
 batch_size: 256
-update_freq: 3000
-updates: 500
+updates: 1
 num_envs: 10
+goal_threshold: 0.05
 max_episode_steps: 300
 reward_coef: 0.1
 value_coef: 0.1

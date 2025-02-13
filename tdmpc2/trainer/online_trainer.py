@@ -85,10 +85,10 @@ class OnlineTrainer(Trainer):
 					eval_next = False
 
 				if self._step > 0:
-					self._ep_idx = self.buffer.add(torch.cat(self._tds[self.cfg.num_envs:]))
+					self._ep_idx = [self.buffer.add(torch.cat(td)) for td in self._tds][-1]
 
 				obs = self.env.reset()
-				self._tds = [self.to_td(o) for o in obs]
+				self._tds = [[self.to_td(o)] for o in obs]
 
 			# Collect experience
 			if self._step > self.cfg.seed_steps:
@@ -97,14 +97,15 @@ class OnlineTrainer(Trainer):
 				action = self.env.rand_act()
 			obs, reward, done, info = self.env.step(action)
       # o', a, r is inserted into _tds
-			self._tds.append(self.to_td(obs, action, reward))
+			for i in range(len(self._tds)):
+				self._tds[i].append(self.to_td(obs[i], action[i], reward[i]))
 
       # buffer contains ((o, None, None), (o', a, r), (o'', a', r')...(o^T + 1, a^T, r^T))
 			# ((o, None, None), (o', a, r), (o'', a', r')...(o^T + 1, a^T, r^T))
 			# ((o, None, None), (o', a, r), (o'', a', r')...(o^T + 1, a^T, r^T))
 
 			# Update agent
-			if self._step >= self.cfg.seed_steps and self._step % self.cfg.update_freq == 0:
+			if self._step >= self.cfg.seed_steps:
 				if self._step == self.cfg.seed_steps:
 					num_updates = self.cfg.seed_updates # self.cfg.seed_steps
 					print('Pretraining agent on seed data...')

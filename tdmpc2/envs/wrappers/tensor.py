@@ -33,12 +33,12 @@ class TensorVectorWrapper(gymnasium.vector.VectorWrapper):
 		return [self._obs_to_tensor(o) for o in self.env.reset()[0]]
 
 	def step(self, action):
-		obs, reward, done, _, info = self.env.step(action.numpy())
+		obs, reward, terminated, truncated, info = self.env.step(action.numpy())
 		info = defaultdict(float, info)
 		info['success'] = float(info['success'])
 		o = [self._obs_to_tensor(o) for o in obs]
 		r = [torch.tensor(r, dtype=torch.float32) for r in reward]
-		return o, r, done, info
+		return o, r, terminated, info
 
 class TensorWrapper(gymnasium.Wrapper):
 	"""
