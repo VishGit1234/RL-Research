@@ -101,7 +101,12 @@ class OnlineTrainer(Trainer):
 			else:
 				action = self.env.rand_act()
 			obs, reward, done, info = self.env.step(action)
+      # o', a, r is inserted into _tds
 			self._tds.append(self.to_td(obs, action, reward))
+
+      # buffer contains ((o, None, None), (o', a, r), (o'', a', r')...(o^T + 1, a^T, r^T))
+			# ((o, None, None), (o', a, r), (o'', a', r')...(o^T + 1, a^T, r^T))
+			# ((o, None, None), (o', a, r), (o'', a', r')...(o^T + 1, a^T, r^T))
 
 			# Update agent
 			if self._step >= self.cfg.seed_steps:
