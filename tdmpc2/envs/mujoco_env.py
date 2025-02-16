@@ -118,7 +118,7 @@ class MujocoEnv(gymnasium.Env):
 
     # reward = np.clip(-dist - msa, -1000, 1000)
     rew = 1 - np.tanh(5*dist)
-    if dist < self.cfg.goal_threshold:
+    if dist < self.cfg.goal_threshold and np.mean(np.abs(self.sim.qvel)) < self.cfg.vel_threshold:
       return 10 + rew
     else:
       return rew
