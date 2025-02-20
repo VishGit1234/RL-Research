@@ -56,11 +56,12 @@ class MujocoEnv(gymnasium.Env):
 
     # Get the observation, reward, done, and info
     observation = self._get_observation()
-    reward = self._get_reward(action)
+    reward, success = self._get_reward(action)
     done = False
     self.done = done
     truncated = False
     info = {}
+    info['success'] = success
 
     # update viewer
     if self.cfg.viewer: self.viewer.sync()
@@ -119,6 +120,6 @@ class MujocoEnv(gymnasium.Env):
     # reward = np.clip(-dist - msa, -1000, 1000)
     rew = 1 - np.tanh(5*dist)
     if dist < self.cfg.goal_threshold and np.mean(np.abs(self.sim.qvel)) < self.cfg.vel_threshold:
-      return 10 + rew
+      return 10 + rew, True
     else:
-      return rew
+      return rew, False

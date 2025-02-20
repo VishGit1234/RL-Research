@@ -9,13 +9,13 @@ eval_episodes: 10
 eval_freq: 50000
 
 # training
-steps: 5000000
+steps: 700000
 batch_size: 256
 updates: 10
 num_envs: 10
 goal_threshold: 0.05
 vel_threshold: 0.01
-max_episode_steps: 1000
+max_episode_steps: 300
 reward_coef: 0.1
 value_coef: 0.1
 consistency_coef: 20
