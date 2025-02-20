@@ -104,6 +104,10 @@ class OnlineTrainer(Trainer):
 			# ((o, None, None), (o', a, r), (o'', a', r')...(o^T + 1, a^T, r^T))
 			# ((o, None, None), (o', a, r), (o'', a', r')...(o^T + 1, a^T, r^T))
 
+      # buffer contains ((o, None, None), (o', a, r), (o'', a', r')...(o^T + 1, a^T, r^T))
+			# ((o, None, None), (o', a, r), (o'', a', r')...(o^T + 1, a^T, r^T))
+			# ((o, None, None), (o', a, r), (o'', a', r')...(o^T + 1, a^T, r^T))
+
 			# Update agent
 			if self._step >= self.cfg.seed_steps:
 				if self._step == self.cfg.seed_steps:
