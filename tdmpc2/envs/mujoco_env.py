@@ -19,7 +19,7 @@ class MujocoEnv(gymnasium.Env):
 
     self.goal = self._generate_goal()
 
-    self.max_episode_steps = 1000
+    self.max_episode_steps = self.cfg.max_episode_steps
 
     self.action_space = Box(-0.75, 0.75, (7,), np.float32)
     self.observation_space = Box(-np.inf, np.inf, (17,), np.float32)
@@ -56,12 +56,12 @@ class MujocoEnv(gymnasium.Env):
 
     # Get the observation, reward, done, and info
     observation = self._get_observation()
-    reward = self._get_reward(action)
-    # done = self._get_done()
+    reward, success = self._get_reward(action)
     done = False
     self.done = done
     truncated = False
     info = {}
+    info['success'] = success
 
     # update viewer
     if self.cfg.viewer: self.viewer.sync()
@@ -70,9 +70,9 @@ class MujocoEnv(gymnasium.Env):
       done = True
       self.done = True
 
-    return observation, reward, done, info
+    return observation, reward, done, truncated, info
 
-  def reset(self):
+  def reset(self, **kwargs):
     # Reset MuJoCo
     mujoco.mj_resetData(self.model, self.sim)
 
@@ -81,7 +81,7 @@ class MujocoEnv(gymnasium.Env):
 
     # Get observation 
     self.goal = self._generate_goal()
-    self.viewer.user_scn.geoms[self._geom_id].pos[:] = self.goal
+    if self.cfg.viewer: self.viewer.user_scn.geoms[self._geom_id].pos[:] = self.goal
     
     obs = self._get_observation()
     reset_info = {}  # This can be populated with any reset-specific info if needed
@@ -90,7 +90,7 @@ class MujocoEnv(gymnasium.Env):
     if self.cfg.viewer: 
       self.viewer.sync()
 
-    return obs
+    return obs, {}
         
   def _get_observation(self):
     # Joint positions
@@ -118,5 +118,8 @@ class MujocoEnv(gymnasium.Env):
     # msa = np.mean(np.square(action))
 
     # reward = np.clip(-dist - msa, -1000, 1000)
-
-    return -dist * 200
+    rew = 1 - np.tanh(5*dist)
+    if dist < self.cfg.goal_threshold and np.mean(np.abs(self.sim.qvel)) < self.cfg.vel_threshold:
+      return 10 + rew, True
+    else:
+      return rew, False

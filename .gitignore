@@ -1,5 +1,6 @@
 # logs
 log/
+logs/
 MUJOCO_LOG.TXT
 
 # Byte-compiled / optimized / DLL files

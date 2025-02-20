@@ -15,7 +15,7 @@ from common.seed import set_seed
 from common.buffer import Buffer
 from .tdmpc2 import TDMPC2
 from trainer.online_trainer import OnlineTrainer
-from envs import make_env
+from envs import make_env, make_vec_env
 from common.logger import Logger
 
 
@@ -47,11 +47,14 @@ def train(cfg: dict):
 	set_seed(cfg.seed)
 	print(colored('Work dir:', 'green', attrs=['bold']), cfg.work_dir)
 
+	cfg.bin_size = (cfg.vmax - cfg.vmin) / cfg.num_bins
+
 	trainer_cls = OnlineTrainer
 	torch.autograd.set_detect_anomaly(True)
 	trainer = trainer_cls(
 		cfg=cfg,
-		env=make_env(cfg),
+		env=make_vec_env(cfg),
+		eval_env=make_env(cfg),
 		agent=TDMPC2(cfg),
 		buffer=Buffer(cfg),
 		logger=Logger(cfg),
