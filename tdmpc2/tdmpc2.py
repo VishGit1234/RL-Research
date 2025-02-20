@@ -26,8 +26,8 @@ class TDMPC2(torch.nn.Module):
 			{'params': self.model._Qs.parameters()},
 			{'params': []
 			 }
-		], lr=self.cfg.lr, capturable=True)
-		self.pi_optim = torch.optim.Adam(self.model._pi.parameters(), lr=self.cfg.lr, eps=1e-5, capturable=True)
+		], lr=self.cfg.lr, capturable=torch.cuda.is_available())
+		self.pi_optim = torch.optim.Adam(self.model._pi.parameters(), lr=self.cfg.lr, eps=1e-5, capturable=torch.cuda.is_available())
 		self.model.eval()
 		self.scale = RunningScale(cfg)
 		self.cfg.iterations += 2*int(cfg.action_dim >= 20) # Heuristic for large action spaces
@@ -80,7 +80,7 @@ class TDMPC2(torch.nn.Module):
 		Args:
 			fp (str or dict): Filepath or state dict to load.
 		"""
-		state_dict = fp if isinstance(fp, dict) else torch.load(fp)
+		state_dict = fp if isinstance(fp, dict) else torch.load(fp, map_location=self.device)
 		self.model.load_state_dict(state_dict["model"])
 
 	@torch.no_grad()
