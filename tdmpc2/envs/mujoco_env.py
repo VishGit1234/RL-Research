@@ -5,6 +5,7 @@ import mujoco.viewer
 import gymnasium
 from gymnasium.spaces import Box
 import random
+from copy import deepcopy
 
 class MujocoEnv(gymnasium.Env):
   def __init__(self, **kwargs):
@@ -21,7 +22,7 @@ class MujocoEnv(gymnasium.Env):
 
     self.max_episode_steps = self.cfg.max_episode_steps
 
-    self.action_space = Box(-0.75, 0.75, (7,), np.float32)
+    self.action_space = Box(-0.75, 0.75, (3,), np.float32)
     self.observation_space = Box(-np.inf, np.inf, (17,), np.float32)
 
     if self.cfg.viewer:
@@ -37,10 +38,12 @@ class MujocoEnv(gymnasium.Env):
       )
       self._geom_id = i
       self.viewer.user_scn.ngeom = i + 1
-  
+       
   def _generate_goal(self):
     MIN_RADIUS = 0.4
-    MAX_RADIUS = 0.8
+    MAX_RADIUS = 0.6
+
+    return np.array([0.3, 0, 0.8])
 
     return np.array([(random.randint(0, 1)*2 - 1)*random.uniform(MIN_RADIUS, MAX_RADIUS), 
                     (random.randint(0, 1)*2 - 1)*random.uniform(MIN_RADIUS, MAX_RADIUS), 
@@ -51,7 +54,12 @@ class MujocoEnv(gymnasium.Env):
     self.timestep += 1
 
     # Apply the action to the environment
-    self.sim.ctrl[:] = action # np.zeros(action.shape)
+    # self.sim.ctrl[:] = action # np.zeros(action.shape)
+    # cur_pos = self.sim.site('pinch_site').xpos.copy()
+    # action = 0.01*(self.goal - cur_pos) / np.linalg.norm(self.goal - cur_pos)
+    self.sim.mocap_pos[0] = self.goal
+    self.sim.mocap_quat[0] = np.array([0, 1, 0, 0])
+    print(self.goal, self.sim.mocap_pos, self.sim.body('bracelet_link').xpos)
     mujoco.mj_step(self.model, self.sim)
 
     # Get the observation, reward, done, and info
@@ -75,6 +83,7 @@ class MujocoEnv(gymnasium.Env):
   def reset(self, **kwargs):
     # Reset MuJoCo
     mujoco.mj_resetData(self.model, self.sim)
+    mujoco.mj_forward(self.model, self.sim)
 
     self.timestep = 0
     self.done = False
@@ -110,7 +119,7 @@ class MujocoEnv(gymnasium.Env):
   def _get_reward(self, action):
     # reward function
     # euclidian distance between goal point and bracelet_with_vision_link which is the end of the arm
-    cur_pos = self.sim.site_xpos[-1]
+    cur_pos = self.sim.site_xpos[0]
     # print(f"current_pos: {cur_pos}")
     dist = np.linalg.norm(self.goal - cur_pos)
 
