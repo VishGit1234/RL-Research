@@ -40,26 +40,20 @@ class MujocoEnv(gymnasium.Env):
       self.viewer.user_scn.ngeom = i + 1
        
   def _generate_goal(self):
-    MIN_RADIUS = 0.4
+    MIN_RADIUS = 0.2
     MAX_RADIUS = 0.6
-
-    return np.array([0.3, 0, 0.8])
 
     return np.array([(random.randint(0, 1)*2 - 1)*random.uniform(MIN_RADIUS, MAX_RADIUS), 
                     (random.randint(0, 1)*2 - 1)*random.uniform(MIN_RADIUS, MAX_RADIUS), 
                     random.uniform(MIN_RADIUS, MAX_RADIUS)])
 
   def step(self, action):
-    # print(self.goal)
     self.timestep += 1
 
     # Apply the action to the environment
-    # self.sim.ctrl[:] = action # np.zeros(action.shape)
-    # cur_pos = self.sim.site('pinch_site').xpos.copy()
-    # action = 0.01*(self.goal - cur_pos) / np.linalg.norm(self.goal - cur_pos)
-    self.sim.mocap_pos[0] = self.goal
+    cur_pos = self.sim.site('pinch_site').xpos.copy()
+    self.sim.mocap_pos[0] = cur_pos + action
     self.sim.mocap_quat[0] = np.array([0, 1, 0, 0])
-    print(self.goal, self.sim.mocap_pos, self.sim.body('bracelet_link').xpos)
     mujoco.mj_step(self.model, self.sim)
 
     # Get the observation, reward, done, and info
@@ -122,9 +116,6 @@ class MujocoEnv(gymnasium.Env):
     cur_pos = self.sim.site_xpos[0]
     # print(f"current_pos: {cur_pos}")
     dist = np.linalg.norm(self.goal - cur_pos)
-
-    # # minimize actuator movement (mean squared average of actuator movement)
-    # msa = np.mean(np.square(action))
 
     # reward = np.clip(-dist - msa, -1000, 1000)
     rew = 1 - np.tanh(5*dist)
