@@ -87,8 +87,8 @@ episode_length: ???
 obs_shapes: ???
 action_dims: ???
 episode_lengths: ???
-seed_steps: 500000
-seed_updates: 50000
+seed_steps: 50000
+seed_updates: 10000
 
 # speedups
 compile: False
