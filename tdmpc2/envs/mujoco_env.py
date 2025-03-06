@@ -23,7 +23,7 @@ class MujocoEnv(gymnasium.Env):
     self.max_episode_steps = self.cfg.max_episode_steps
 
     self.action_space = Box(-0.75, 0.75, (3,), np.float32)
-    self.observation_space = Box(-np.inf, np.inf, (17,), np.float32)
+    self.observation_space = Box(-np.inf, np.inf, (7,), np.float32)
 
     if self.cfg.viewer:
       self.viewer = mujoco.viewer.launch_passive(self.model, self.sim)
@@ -96,24 +96,24 @@ class MujocoEnv(gymnasium.Env):
     return obs, {}
         
   def _get_observation(self):
-    # Joint positions
-    qpos = self.sim.qpos
+    # End-effector position
+    xpos = self.sim.site('pinch_site').xpos.copy()
     
-    # Joint velocities
-    qvel = self.sim.qvel
+    # End-effector velocities
+    xvel = self.sim.site('pinch_site').xvel.copy()
 
     # Goal
     goal = self.goal
     
     # Concatenate and return as a single observation vector
-    observation = np.concatenate([qpos, qvel, goal])
+    observation = np.concatenate([xpos, xvel, goal])
     
     return observation
 
   def _get_reward(self, action):
     # reward function
     # euclidian distance between goal point and bracelet_with_vision_link which is the end of the arm
-    cur_pos = self.sim.site_xpos[0]
+    cur_pos = self.sim.site('pinch_site').xpos.copy()
     # print(f"current_pos: {cur_pos}")
     dist = np.linalg.norm(self.goal - cur_pos)
 
