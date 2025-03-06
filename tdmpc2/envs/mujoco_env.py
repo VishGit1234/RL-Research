@@ -5,7 +5,7 @@ import mujoco.viewer
 import gymnasium
 from gymnasium.spaces import Box
 import random
-from copy import deepcopy
+import time
 
 class MujocoEnv(gymnasium.Env):
   def __init__(self, **kwargs):
@@ -23,7 +23,7 @@ class MujocoEnv(gymnasium.Env):
     self.max_episode_steps = self.cfg.max_episode_steps
 
     self.action_space = Box(-0.75, 0.75, (3,), np.float32)
-    self.observation_space = Box(-np.inf, np.inf, (7,), np.float32)
+    self.observation_space = Box(-np.inf, np.inf, (9,), np.float32)
 
     if self.cfg.viewer:
       self.viewer = mujoco.viewer.launch_passive(self.model, self.sim)
@@ -38,6 +38,10 @@ class MujocoEnv(gymnasium.Env):
       )
       self._geom_id = i
       self.viewer.user_scn.ngeom = i + 1
+
+    # Initialize position 
+    self.prev_pos = self.sim.site('pinch_site').xpos.copy()
+    self.prev_time = time.time()
        
   def _generate_goal(self):
     MIN_RADIUS = 0.2
@@ -48,6 +52,7 @@ class MujocoEnv(gymnasium.Env):
                     random.uniform(MIN_RADIUS, MAX_RADIUS)])
 
   def step(self, action):
+    action *= 0.1
     self.timestep += 1
 
     # Apply the action to the environment
@@ -100,7 +105,9 @@ class MujocoEnv(gymnasium.Env):
     xpos = self.sim.site('pinch_site').xpos.copy()
     
     # End-effector velocities
-    xvel = self.sim.site('pinch_site').xvel.copy()
+    xvel = (xpos - self.prev_pos)/(time.time() - self.prev_time)
+    self.prev_time = time.time()
+    self.prev_pos = xpos
 
     # Goal
     goal = self.goal
