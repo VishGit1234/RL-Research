@@ -91,6 +91,7 @@ class MujocoEnv(gymnasium.Env):
     self.goal = self._generate_goal()
     if self.cfg.viewer: self.viewer.user_scn.geoms[self._geom_id].pos[:] = self.goal
     
+    self.prev_pos = self.sim.site('pinch_site').xpos.copy()
     obs = self._get_observation()
     reset_info = {}  # This can be populated with any reset-specific info if needed
 
@@ -105,7 +106,7 @@ class MujocoEnv(gymnasium.Env):
     xpos = self.sim.site('pinch_site').xpos.copy()
     
     # End-effector velocities
-    xvel = (xpos - self.prev_pos)/(time.time() - self.prev_time)
+    xvel = (xpos - self.prev_pos)/max(time.time() - self.prev_time, 1e-6)
     self.prev_time = time.time()
     self.prev_pos = xpos
 
@@ -127,6 +128,6 @@ class MujocoEnv(gymnasium.Env):
     # reward = np.clip(-dist - msa, -1000, 1000)
     rew = 1 - np.tanh(5*dist)
     if dist < self.cfg.goal_threshold and np.mean(np.abs(self.sim.qvel)) < self.cfg.vel_threshold:
-      return 10 + rew, True
+      return rew, True
     else:
       return rew, False
