@@ -23,7 +23,7 @@ class MujocoEnv(gymnasium.Env):
     self.max_episode_steps = self.cfg.max_episode_steps
 
     self.action_space = Box(-0.75, 0.75, (3,), np.float32)
-    self.observation_space = Box(-np.inf, np.inf, (9,), np.float32)
+    self.observation_space = Box(-np.inf, np.inf, (3,), np.float32)
 
     if self.cfg.viewer:
       self.viewer = mujoco.viewer.launch_passive(self.model, self.sim)
@@ -64,7 +64,7 @@ class MujocoEnv(gymnasium.Env):
     # Get the observation, reward, done, and info
     observation = self._get_observation()
     reward, success = self._get_reward(action)
-    done = False
+    done = success
     self.done = done
     truncated = False
     info = {}
@@ -114,7 +114,7 @@ class MujocoEnv(gymnasium.Env):
     goal = self.goal
     
     # Concatenate and return as a single observation vector
-    observation = np.concatenate([xpos, xvel, goal])
+    observation = np.concatenate([xpos - goal])
     
     return observation
 

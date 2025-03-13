@@ -9,13 +9,13 @@ eval_episodes: 10
 eval_freq: 50000
 
 # training
-steps: 700000
-batch_size: 256
-updates: 10
-num_envs: 10
+steps: 2000000
+batch_size: 64
+updates: 1
+num_envs: 1
 goal_threshold: 0.05
 vel_threshold: 0.01
-max_episode_steps: 300
+max_episode_steps: 400
 reward_coef: 0.1
 value_coef: 0.1
 consistency_coef: 20
@@ -54,15 +54,15 @@ vmax: 7
 
 # architecture
 model_size: ???
-num_enc_layers: 2
-enc_dim: 256
+num_enc_layers: 0
+enc_dim: 8
 num_channels: 32
-mlp_dim: 512
-latent_dim: 512
+mlp_dim: 8
+latent_dim: 8
 task_dim: 0
-num_q: 5
+num_q: 2
 dropout: 0.01
-simnorm_dim: 8
+simnorm_dim: 4
 
 # logging
 wandb_project: ???
