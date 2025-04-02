@@ -19,14 +19,21 @@
   <worldbody>
     <light pos="0 0 1.5" directional="true"/>
     <geom name="floor" size="0 0 0.05" type="plane" material="groundplane"/>
-    <body mocap="true" name="mocap" pos="0 0 0">
+    <body name="cube_sweep" pos="0.4 0.4 0.1">
+      <freejoint/>
+      <geom name="cube_geom_sweep" type="box" size="0.1 0.1 0.05" mass="1"/>
+    </body>
+    <body mocap="true" name="mocap">
         <!--For debugging, set the alpha to 1-->
-        <!-- <geom conaffinity="0" contype="0" pos="0 0 0" rgba="0.5 0.5 0.5 1" size="0.01 0.01 0.01" type="sphere"></geom> -->
-        <site name="mocap" pos="0 0 0" rgba="0.0 0.5 0.5 0" size="0.01" type="sphere"></site>
+        <geom name="x_axis" type="cylinder" fromto="0 0 0 0.1 0 0" size="0.002" rgba="1 0 0 1"/>
+        <geom name="y_axis" type="cylinder" fromto="0 0 0 0 0.1 0" size="0.002" rgba="0 1 0 1"/>
+        <geom name="z_axis" type="cylinder" fromto="0 0 0 0 0 0.1" size="0.002" rgba="0 0 1 1"/>
+        <!-- <geom conaffinity="0" contype="0" pos="0 0 0" rgba="0.5 0.5 0.5 1" size="0.03 0.03 0.03" type="box"></geom> -->
+        <site name="mocap" pos="0 0 0" rgba="0.0 0.5 0.5 0" size="0.1" type="sphere"></site>
     </body>
   </worldbody>
 
   <equality>
-      <weld body1="mocap" body2="bracelet_link" relpose="0 0 0 0 1 0 0"  anchor="0 0 -0.061525" solref="0.008 1.5"/>
+      <weld body1="mocap" body2="bracelet_link" relpose="0 0 0 1 0 0 0"  anchor="0 0 -0.061525" solref="0.001 3.0"/>
   </equality>
 </mujoco>

@@ -22,8 +22,8 @@ class MujocoEnv(gymnasium.Env):
 
     self.max_episode_steps = self.cfg.max_episode_steps
 
-    self.action_space = Box(-0.75, 0.75, (3,), np.float32)
-    self.observation_space = Box(-np.inf, np.inf, (3,), np.float32)
+    self.action_space = Box(-0.75, 0.75, (2,), np.float32)
+    self.observation_space = Box(-np.inf, np.inf, (2,), np.float32)
 
     if self.cfg.viewer:
       self.viewer = mujoco.viewer.launch_passive(self.model, self.sim)
@@ -44,12 +44,12 @@ class MujocoEnv(gymnasium.Env):
     self.prev_time = time.time()
        
   def _generate_goal(self):
-    MIN_RADIUS = 0.2
+    MIN_RADIUS = 0.5
     MAX_RADIUS = 0.6
 
     return np.array([(random.randint(0, 1)*2 - 1)*random.uniform(MIN_RADIUS, MAX_RADIUS), 
-                    (random.randint(0, 1)*2 - 1)*random.uniform(MIN_RADIUS, MAX_RADIUS), 
-                    random.uniform(MIN_RADIUS, MAX_RADIUS)])
+                    (random.randint(0, 1)*2 - 1)*random.uniform(MIN_RADIUS, MAX_RADIUS),
+                    0.05])
 
   def step(self, action):
     action *= 0.1
@@ -57,8 +57,8 @@ class MujocoEnv(gymnasium.Env):
 
     # Apply the action to the environment
     cur_pos = self.sim.site('pinch_site').xpos.copy()
-    self.sim.mocap_pos[0] = cur_pos + action
-    self.sim.mocap_quat[0] = np.array([0, 1, 0, 0])
+    self.sim.mocap_pos[0] = np.array([cur_pos[0] + action[0], cur_pos[1] + action[1], 0.05])
+    self.sim.mocap_quat[0] = np.array([1, 0, 0, 0])
     mujoco.mj_step(self.model, self.sim)
 
     # Get the observation, reward, done, and info
