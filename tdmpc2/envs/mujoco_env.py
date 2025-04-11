@@ -52,14 +52,23 @@ class MujocoEnv(gymnasium.Env):
                     0.05])
 
   def step(self, action):
-    action *= 0.1
+    action *= 0.01
     self.timestep += 1
 
     # Apply the action to the environment
     cur_pos = self.sim.site('pinch_site').xpos.copy()
-    self.sim.mocap_pos[0] = np.array([cur_pos[0] + action[0], cur_pos[1] + action[1], 0.05])
+    print(cur_pos)
+    print(action)
+    self.sim.mocap_pos[0] = np.array([self.sim.mocap_pos[0][0] + action[0], self.sim.mocap_pos[0][1] + action[1] , 0.2])
     self.sim.mocap_quat[0] = np.array([1, 0, 0, 0])
     mujoco.mj_step(self.model, self.sim)
+
+    contact_count = self.sim.ncon
+    if contact_count > 0:
+      body1 = self.sim.contact[0].geom1
+      body2 = self.sim.contact[0].geom2
+      # print(body1)
+      # print(body2)
 
     # Get the observation, reward, done, and info
     observation = self._get_observation()
@@ -90,6 +99,19 @@ class MujocoEnv(gymnasium.Env):
     # Get observation 
     self.goal = self._generate_goal()
     if self.cfg.viewer: self.viewer.user_scn.geoms[self._geom_id].pos[:] = self.goal
+    
+    init_joint_config = np.deg2rad(np.array([358.117, 34.516, 180.888, 238.041, 359.944, 337.084, 88.947]))
+    print(init_joint_config)
+    
+    # for i in range(1):
+    #   mujoco.mj_step(self.model, self.sim)
+    #   # print(init_joint_config)
+    #   # self.sim.ctrl[:7] = init_joint_config[:7]
+    #   # update viewer
+    #   if self.cfg.viewer: 
+    #     self.viewer.sync()
+    # # self.sim.mocap_pos[0] = [0.3, 0, 0.1]
+
     
     self.prev_pos = self.sim.site('pinch_site').xpos.copy()
     obs = self._get_observation()

@@ -16,7 +16,6 @@
     <default class="small_actuator">
       <position kp="500" kv="50" forcerange="-52 52"/>
     </default>
-    <site size="0.001" rgba="0.5 0.5 0.5 0.3" group="4"/>
   </default>
 
   <asset>
