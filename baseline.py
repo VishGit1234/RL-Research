@@ -10,10 +10,11 @@ from stable_baselines3.common.env_util import make_vec_env
 
 @parse_cfg
 def baseline(cfg):
+  cfg.viewer = False
   vec_env = make_vec_env(MujocoEnv, n_envs=4, env_kwargs={"cfg": cfg})
 
   model = PPO("MlpPolicy", vec_env, verbose=1)
-  model.learn(total_timesteps=700000, progress_bar=True)
+  model.learn(total_timesteps=250000, progress_bar=True)
 
   model.save("ppo_model")
 

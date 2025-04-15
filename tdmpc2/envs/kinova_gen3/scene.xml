@@ -19,27 +19,17 @@
   <worldbody>
     <light pos="0 0 1.5" directional="true"/>
     <geom name="floor" size="0 0 0.05" type="plane" material="groundplane"/>
-    <body name="cube_sweep" pos="0.4 0.4 0.1">
+    <body name="cube_sweep" pos="0.2 0.2 0.02">
       <freejoint/>
-      <geom name="cube_geom_sweep" type="box" size="0.1 0.1 0.05" mass="1"/>
+      <geom name="cube_geom_sweep" type="box" size="0.08 0.08 0.02" mass="1"/>
     </body>
-    <body name="mocap" pos="0.5 0 .5" quat="1 0 0 0" mocap="true">
-        <!-- <site name="x_axis" type="cylinder" fromto="0 0 0 0.1 0 0" size="0.002" rgba="1 0 0 1"/>
-        <site name="y_axis" type="cylinder" fromto="0 0 0 0 0.1 0" size="0.002" rgba="0 1 0 1"/>
-        <site name="z_axis" type="cylinder" fromto="0 0 0 0 0 0.1" size="0.002" rgba="0 0 1 1"/> -->
-      <site type="box" size="0.001 .001 .001" rgba=".6 .3 .3 1"/>
+    <body name="pinch_site_target" quat="1 0 0 0" mocap="true">
+      <site/>
     </body>
-    <!-- <body mocap="true" name="mocap"> -->
-        <!--For debugging, set the alpha to 1-->
-        <!-- <geom name="x_axis" type="cylinder" fromto="0 0 0 0.1 0 0" size="0.002" rgba="1 0 0 1"/> -->
-        <!-- <geom name="y_axis" type="cylinder" fromto="0 0 0 0 0.1 0" size="0.002" rgba="0 1 0 1"/> -->
-        <!-- <geom name="z_axis" type="cylinder" fromto="0 0 0 0 0 0.1" size="0.002" rgba="0 0 1 1"/> -->
-        <!-- <geom conaffinity="0" contype="0" pos="0 0 0" rgba="0.5 0.5 0.5 1" size="0.03 0.03 0.03" type="box"></geom> -->
-        <!-- <site name="mocap" pos="0 0 0" quat="1 0 0 0" rgba="0.0 0.5 0.5 0" size="0.1" type="sphere"></site> -->
-    <!-- </body> -->
   </worldbody>
 
-  <equality>
-      <weld body1="mocap" body2="bracelet_link" relpose="0 0 0 1 0 0 0" solimp = "0.99 0.999 0.01 0.1 1" solref="0.002 3.0"/>
-  </equality>
+  <keyframe>
+    <key name="home" qpos="6.25032076 0.60241784 3.15709118 -2.128586102 6.28220792 -0.39995964788322566 1.55241801 0.2 0.2 0.02 0 0 0 0"
+      ctrl="6.25032076 0.60241784 3.15709118 -2.128586102 6.28220792 -0.399959647 1.55241801"/>
+  </keyframe>
 </mujoco>

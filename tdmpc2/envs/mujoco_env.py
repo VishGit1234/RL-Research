@@ -6,14 +6,24 @@ import gymnasium
 from gymnasium.spaces import Box
 import random
 import time
+import mink
 
 class MujocoEnv(gymnasium.Env):
   def __init__(self, **kwargs):
     path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'kinova_gen3', 'scene.xml')
     self.model = mujoco.MjModel.from_xml_path(path)
-    self.sim = mujoco.MjData(self.model)
-    # goal should be the position we want the end of the arm to be at
-    # should be an numpy array
+    self.data = mujoco.MjData(self.model)
+
+    # IK Config 
+    self.configuration = mink.Configuration(self.model)
+
+    # Move arm to reset position
+    mujoco.mj_resetDataKeyframe(self.model, self.data, self.model.key("home").id)
+    self.configuration.update(self.data.qpos)
+    mujoco.mj_forward(self.model, self.data)
+    # Initialize the mocap target at the end-effector site.
+    mink.move_mocap_to_frame(self.model, self.data, "pinch_site_target", "pinch_site", "site")
+
     self.timestep = 0
     self.done = False
     self.cfg = kwargs['cfg']
@@ -23,56 +33,69 @@ class MujocoEnv(gymnasium.Env):
     self.max_episode_steps = self.cfg.max_episode_steps
 
     self.action_space = Box(-0.75, 0.75, (2,), np.float32)
-    self.observation_space = Box(-np.inf, np.inf, (2,), np.float32)
+    self.observation_space = Box(-np.inf, np.inf, (12,), np.float32)
 
     if self.cfg.viewer:
-      self.viewer = mujoco.viewer.launch_passive(self.model, self.sim)
-      i = self.viewer.user_scn.ngeom
-      mujoco.mjv_initGeom(
-        self.viewer.user_scn.geoms[i],
-        type=mujoco.mjtGeom.mjGEOM_SPHERE,
-        size=[0.02, 0, 0],
-        pos=self.goal,
-        mat=np.eye(3).flatten(),
-        rgba=np.array([0, 1, 0, 2])
-      )
-      self._geom_id = i
-      self.viewer.user_scn.ngeom = i + 1
-
-    # Initialize position 
-    self.prev_pos = self.sim.site('pinch_site').xpos.copy()
-    self.prev_time = time.time()
+      self.viewer = mujoco.viewer.launch_passive(self.model, self.data)
        
   def _generate_goal(self):
-    MIN_RADIUS = 0.5
-    MAX_RADIUS = 0.6
+    """
+    Generate goal, which is the desired position of the block
+    """
+    MIN_DISPLACEMENT = 0.1
+    MAX_DISPLACEMENT = 0.5
+    self.original_displacement = np.random.uniform(MIN_DISPLACEMENT, MAX_DISPLACEMENT)
+    return self.data.body("cube_sweep").xpos.copy() + np.array([0, self.original_displacement, 0])
 
-    return np.array([(random.randint(0, 1)*2 - 1)*random.uniform(MIN_RADIUS, MAX_RADIUS), 
-                    (random.randint(0, 1)*2 - 1)*random.uniform(MIN_RADIUS, MAX_RADIUS),
-                    0.05])
+  def solve_ik(self, max_iters=30, pos_threshold=1e-4, ori_threshold=1e-4):
+    """
+    Solves the inverse kinematics to move the end-effector to the mocap body.
+
+    Args:
+        max_iters (int): Maximum number of iterations for the IK solver.
+        pos_threshold (float): Position error threshold for convergence.
+        ori_threshold (float): Orientation error threshold for convergence.
+    """
+
+    # Define the end-effector task
+    end_effector_task = mink.FrameTask(
+        frame_name="pinch_site",
+        frame_type="site",
+        position_cost=1.0,
+        orientation_cost=1.0,
+        lm_damping=1.0,
+    )
+
+    # Set the target position and orientation
+    T_wt = mink.SE3.from_mocap_name(self.model, self.data, "pinch_site_target")
+    end_effector_task.set_target(T_wt)
+
+    # Solve IK
+    for i in range(max_iters):
+        vel = mink.solve_ik(self.configuration, [end_effector_task], 0.01, "quadprog", 1e-2)
+        self.configuration.integrate_inplace(vel, 0.01)
+
+        # Check for convergence
+        err = end_effector_task.compute_error(self.configuration)
+        pos_achieved = np.linalg.norm(err[:3]) <= pos_threshold
+        ori_achieved = np.linalg.norm(err[3:]) <= ori_threshold
+        if pos_achieved and ori_achieved:
+            break
+
+    # Return whether the solver converged
+    return self.configuration
 
   def step(self, action):
     action *= 0.01
     self.timestep += 1
 
-    # Apply the action to the environment
-    cur_pos = self.sim.site('pinch_site').xpos.copy()
-    print(cur_pos)
-    print(action)
-    self.sim.mocap_pos[0] = np.array([self.sim.mocap_pos[0][0] + action[0], self.sim.mocap_pos[0][1] + action[1] , 0.2])
-    self.sim.mocap_quat[0] = np.array([1, 0, 0, 0])
-    mujoco.mj_step(self.model, self.sim)
-
-    contact_count = self.sim.ncon
-    if contact_count > 0:
-      body1 = self.sim.contact[0].geom1
-      body2 = self.sim.contact[0].geom2
-      # print(body1)
-      # print(body2)
+    self.data.mocap_pos[0][:2] += action
+    self.data.ctrl[:7] = self.solve_ik().q[:7]
+    mujoco.mj_step(self.model, self.data)
 
     # Get the observation, reward, done, and info
     observation = self._get_observation()
-    reward, success = self._get_reward(action)
+    reward, success = self._get_reward()
     done = success
     self.done = done
     truncated = False
@@ -89,31 +112,19 @@ class MujocoEnv(gymnasium.Env):
     return observation, reward, done, truncated, info
 
   def reset(self, **kwargs):
-    # Reset MuJoCo
-    mujoco.mj_resetData(self.model, self.sim)
-    mujoco.mj_forward(self.model, self.sim)
-
     self.timestep = 0
     self.done = False
+    
+    # Move arm to reset position
+    mujoco.mj_resetDataKeyframe(self.model, self.data, self.model.key("home").id)
+    self.configuration.update(self.data.qpos)
+    mujoco.mj_forward(self.model, self.data)
+    # Initialize the mocap target at the end-effector site.
+    mink.move_mocap_to_frame(self.model, self.data, "pinch_site_target", "pinch_site", "site")
 
-    # Get observation 
+    # Generate goal 
     self.goal = self._generate_goal()
-    if self.cfg.viewer: self.viewer.user_scn.geoms[self._geom_id].pos[:] = self.goal
     
-    init_joint_config = np.deg2rad(np.array([358.117, 34.516, 180.888, 238.041, 359.944, 337.084, 88.947]))
-    print(init_joint_config)
-    
-    # for i in range(1):
-    #   mujoco.mj_step(self.model, self.sim)
-    #   # print(init_joint_config)
-    #   # self.sim.ctrl[:7] = init_joint_config[:7]
-    #   # update viewer
-    #   if self.cfg.viewer: 
-    #     self.viewer.sync()
-    # # self.sim.mocap_pos[0] = [0.3, 0, 0.1]
-
-    
-    self.prev_pos = self.sim.site('pinch_site').xpos.copy()
     obs = self._get_observation()
     reset_info = {}  # This can be populated with any reset-specific info if needed
 
@@ -125,31 +136,40 @@ class MujocoEnv(gymnasium.Env):
         
   def _get_observation(self):
     # End-effector position
-    xpos = self.sim.site('pinch_site').xpos.copy()
-    
-    # End-effector velocities
-    xvel = (xpos - self.prev_pos)/max(time.time() - self.prev_time, 1e-6)
-    self.prev_time = time.time()
-    self.prev_pos = xpos
+    pusher_pos = self.data.body('pusher').xpos.copy()
 
     # Goal
     goal = self.goal
+
+    # Block position
+    cube_pos = self.data.body('cube_sweep').xpos.copy()
+    # Compute cube back position (-y direction from center)
+    cube_half_length_y = self.model.geom('cube_geom_sweep').size[1]
+    cube_xmat = self.data.body('cube_sweep').xmat.copy().reshape(3, 3)
+    cube_back_pos = cube_pos - cube_half_length_y * cube_xmat[:, 1]
+
+    # Block velocity (linear + angular)
+    cube_vel = self.data.body('cube_sweep').cvel.copy()
     
     # Concatenate and return as a single observation vector
-    observation = np.concatenate([xpos - goal])
+    observation = np.concatenate([goal - pusher_pos, cube_back_pos - pusher_pos, cube_vel])
     
     return observation
 
-  def _get_reward(self, action):
+  def _get_reward(self):
     # reward function
-    # euclidian distance between goal point and bracelet_with_vision_link which is the end of the arm
-    cur_pos = self.sim.site('pinch_site').xpos.copy()
+    cube_pos = self.data.body('cube_sweep').xpos.copy()
+    # Compute cube back position (-y direction from center)
+    cube_half_length_y = self.model.geom('cube_geom_sweep').size[1]
+    cube_xmat = self.data.body('cube_sweep').xmat.copy().reshape(3, 3)
+    cube_back_pos = cube_pos - cube_half_length_y * cube_xmat[:, 1]
+    pusher_pos = self.data.body('pusher').xpos.copy()
     # print(f"current_pos: {cur_pos}")
-    dist = np.linalg.norm(self.goal - cur_pos)
+    cube_goal_dist = np.linalg.norm(self.goal - cube_pos)
+    cube_arm_dist = np.linalg.norm(cube_back_pos - pusher_pos)
 
-    # reward = np.clip(-dist - msa, -1000, 1000)
-    rew = 1 - np.tanh(5*dist)
-    if dist < self.cfg.goal_threshold and np.mean(np.abs(self.sim.qvel)) < self.cfg.vel_threshold:
+    rew = 2 - np.tanh(5*cube_goal_dist) - np.tanh(5*cube_arm_dist)
+    if cube_goal_dist < self.cfg.goal_threshold and np.linalg.norm(self.data.body('cube_sweep').cvel.copy()) < self.cfg.vel_threshold:
       return rew, True
     else:
       return rew, False

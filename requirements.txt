@@ -9,3 +9,4 @@ torch==2.6.0
 torchrl==0.6.0
 PyYAML==6.0.2
 wandb==0.19.6
+mink==0.0.7
