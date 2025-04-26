@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=rl_research
-#SBATCH --cpus-per-task=55
+#SBATCH --cpus-per-task=25
 #SBATCH --mem=20G
 #SBATCH --gres tmpdisk:30480
 #SBATCH --time=23:00:00

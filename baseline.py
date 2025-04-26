@@ -11,7 +11,7 @@ from stable_baselines3.common.vec_env import VecNormalize
 
 @parse_cfg
 def baseline(cfg):
-  vec_env = VecNormalize(make_vec_env(MujocoEnv, n_envs=50, env_kwargs={"cfg": cfg}))
+  vec_env = VecNormalize(make_vec_env(MujocoEnv, n_envs=20, env_kwargs={"cfg": cfg}))
 
   model = PPO('MlpPolicy', vec_env, verbose=1, policy_kwargs={"net_arch" : [256, 256]})
   model.learn(total_timesteps=1000000, progress_bar=False)
