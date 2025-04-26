@@ -81,7 +81,7 @@
                       resolution="640 480"/>
                     <site name="pinch_site" pos="0 0 -0.22" quat="0 1 0 0"/>
                     <body name="pusher" pos="0 0 -0.2" quat="1 0 0 0">
-                      <geom type="cylinder" size="0.05 0.02" rgba=".6 .3 .3 1"/>
+                      <geom name="pusher_geom" type="cylinder" size="0.05 0.02" rgba=".6 .3 .3 1"/>
                     </body>
                   </body>
                 </body>

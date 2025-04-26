@@ -25,15 +25,14 @@ class MujocoEnv(gymnasium.Env):
     mink.move_mocap_to_frame(self.model, self.data, "pinch_site_target", "pinch_site", "site")
 
     self.timestep = 0
-    self.done = False
     self.cfg = kwargs['cfg']
 
     self.goal = self._generate_goal()
 
     self.max_episode_steps = self.cfg.max_episode_steps
 
-    self.action_space = Box(-0.75, 0.75, (2,), np.float32)
-    self.observation_space = Box(-np.inf, np.inf, (12,), np.float32)
+    self.action_space = Box(-1, 1, (2,), np.float32)
+    self.observation_space = Box(-np.inf, np.inf, (6,), np.float32)
 
     if self.cfg.viewer:
       self.viewer = mujoco.viewer.launch_passive(self.model, self.data)
@@ -44,7 +43,7 @@ class MujocoEnv(gymnasium.Env):
     """
     MIN_DISPLACEMENT = 0.1
     MAX_DISPLACEMENT = 0.5
-    self.original_displacement = np.random.uniform(MIN_DISPLACEMENT, MAX_DISPLACEMENT)
+    self.original_displacement = 0.1 # np.random.uniform(MIN_DISPLACEMENT, MAX_DISPLACEMENT)
     return self.data.body("cube_sweep").xpos.copy() + np.array([0, self.original_displacement, 0])
 
   def solve_ik(self, max_iters=30, pos_threshold=1e-4, ori_threshold=1e-4):
@@ -86,34 +85,30 @@ class MujocoEnv(gymnasium.Env):
     return self.configuration
 
   def step(self, action):
-    action *= 0.01
+    scaled_action = action*0.001 
     self.timestep += 1
-
-    self.data.mocap_pos[0][:2] += action
+    self.data.mocap_pos[0][:2] += scaled_action
     self.data.ctrl[:7] = self.solve_ik().q[:7]
     mujoco.mj_step(self.model, self.data)
 
     # Get the observation, reward, done, and info
     observation = self._get_observation()
-    reward, success = self._get_reward()
+    reward, success = self._get_reward(action)
     done = success
-    self.done = done
     truncated = False
     info = {}
-    info['success'] = success
+    info['success'] = float(success)
 
     # update viewer
     if self.cfg.viewer: self.viewer.sync()
 
     if self.timestep > self.max_episode_steps:
       done = True
-      self.done = True
 
     return observation, reward, done, truncated, info
 
   def reset(self, **kwargs):
     self.timestep = 0
-    self.done = False
     
     # Move arm to reset position
     mujoco.mj_resetDataKeyframe(self.model, self.data, self.model.key("home").id)
@@ -150,26 +145,42 @@ class MujocoEnv(gymnasium.Env):
 
     # Block velocity (linear + angular)
     cube_vel = self.data.body('cube_sweep').cvel.copy()
+
+    # Block orientation
+    cube_quat = self.data.body('cube_sweep').xquat.copy()
     
     # Concatenate and return as a single observation vector
-    observation = np.concatenate([goal - pusher_pos, cube_back_pos - pusher_pos, cube_vel])
+    observation = np.concatenate([goal[:2] - pusher_pos[:2], 
+                                  cube_back_pos[:2] - pusher_pos[:2], 
+                                  np.expand_dims(np.linalg.norm(cube_vel), axis=0),
+                                  np.expand_dims(np.arccos(abs(cube_quat[0])), axis=0)])
     
     return observation
 
-  def _get_reward(self):
+  def _get_reward(self, action):
     # reward function
     cube_pos = self.data.body('cube_sweep').xpos.copy()
     # Compute cube back position (-y direction from center)
     cube_half_length_y = self.model.geom('cube_geom_sweep').size[1]
     cube_xmat = self.data.body('cube_sweep').xmat.copy().reshape(3, 3)
+    cube_xquat = self.data.body('cube_sweep').xquat.copy()
     cube_back_pos = cube_pos - cube_half_length_y * cube_xmat[:, 1]
     pusher_pos = self.data.body('pusher').xpos.copy()
+    pusher_rad = self.model.geom('pusher_geom').size[0]
+    pusher_speed = np.linalg.norm(self.data.body('pusher').cvel.copy())
     # print(f"current_pos: {cur_pos}")
     cube_goal_dist = np.linalg.norm(self.goal - cube_pos)
-    cube_arm_dist = np.linalg.norm(cube_back_pos - pusher_pos)
+    cube_arm_dist = np.linalg.norm(cube_back_pos - pusher_pos) - pusher_rad
+    cube_speed = np.linalg.norm(self.data.body('cube_sweep').cvel.copy())
 
-    rew = 2 - np.tanh(5*cube_goal_dist) - np.tanh(5*cube_arm_dist)
-    if cube_goal_dist < self.cfg.goal_threshold and np.linalg.norm(self.data.body('cube_sweep').cvel.copy()) < self.cfg.vel_threshold:
-      return rew, True
+    # The constants are highly dependent on object and goal location
+    rew_terms = [
+      5*(1 - np.tanh(15*cube_goal_dist)),
+      2*(1 - np.tanh(10*cube_arm_dist)),
+      -2*np.arccos(abs(cube_xquat[0]))
+    ]
+    rew = sum(rew_terms)
+    if cube_goal_dist < self.cfg.goal_threshold:
+      return rew + 5*self.cfg.max_episode_steps, True
     else:
       return rew, False
