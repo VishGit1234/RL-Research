@@ -1,0 +1,20 @@
+services:
+  rl-genesis:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    image: rl-genesis:latest
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=0    
+    # command: tail -f /dev/null
+    command: python3 main.py
+    volumes:
+      - ./main.py:/src/main.py
+      - ./images/:/src/images/
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
