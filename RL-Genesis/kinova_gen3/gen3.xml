@@ -131,7 +131,7 @@
                     <!-- <body name="pusher" pos="0 0 -0.2" quat="1 0 0 0">
                       <geom name="pusher_geom" type="cylinder" size="0.05 0.02" rgba=".6 .3 .3 1"/>
                     </body> -->
-                    <body name="base" childclass="2f85" pos="0 0 -0.07" quat="0 1 0 0">
+                    <body name="base" childclass="2f85" pos="0 0 -0.065" quat="0 1 0 0">
                       <inertial mass="0.777441" pos="0 -2.70394e-05 0.0354675" quat="1 0 0 0"
                         diaginertia="0.000260285 0.000225381 0.000152708"/>
                       <geom class="visual_2f85" pos="0 0 0.0108" quat="0 0 0 1"   mesh="base"/>
