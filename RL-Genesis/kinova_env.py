@@ -26,7 +26,8 @@ class KinovaEnv:
         """
 
         self.num_envs = num_envs
-        self.num_obs = 10 # Observation space # of dimensions
+        self.num_obs = 10 # no. of dimensions in observation space 
+        self.num_actions = 3 # no. of dims in action space
 
         self.device = gs.device
 
@@ -99,6 +100,7 @@ class KinovaEnv:
         self.episode_length_buf = torch.zeros((self.num_envs,), device=gs.device, dtype=gs.tc_int)
         self.episode_sums = torch.zeros((self.num_envs,), device=gs.device, dtype=gs.tc_float)
         self.info = dict()
+        self.info["observations"] = dict() # Only for PPO library
 
         # set to initial state
         self._reset_idx(torch.arange(self.num_envs, device=gs.device))
@@ -123,6 +125,9 @@ class KinovaEnv:
         self.robot.control_dofs_position(qpos)
         self.scene.step()
 
+        # increment episode length
+        self.episode_length_buf += 1
+
         # compute reward
         self.rew_buf[:] = 0.0
         rew = self._get_reward()
@@ -132,6 +137,7 @@ class KinovaEnv:
         # check termination and reset
         self.reset_buf = self.episode_length_buf > self.max_episode_length
         self.reset_buf |= torch.norm(self.goal[:2] - self.box.get_pos()[:, :2], dim=1) < self.env_cfg["termination_if_cube_goal_dist_less_than"]
+
 
         time_out_idx = (self.episode_length_buf > self.max_episode_length).nonzero(as_tuple=False).flatten()
         self.info["time_outs"] = torch.zeros_like(self.reset_buf, device=gs.device, dtype=gs.tc_float)

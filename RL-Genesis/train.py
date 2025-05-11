@@ -7,7 +7,7 @@ from kinova_env import KinovaEnv
 
 def train():
     MAX_ITERATIONS=101
-    NUM_ENVS=512
+    NUM_ENVS=1024
     train_cfg = {
         "algorithm": {
             "class_name": "PPO",
@@ -50,7 +50,7 @@ def train():
         "seed": 1,
     }
 
-    gs.init(backend=gs.gpu, logging_level="info")
+    gs.init(backend=gs.gpu, logging_level="warning")
 
     log_dir = "logs/kinova_sweep"
 
@@ -58,7 +58,7 @@ def train():
         "episode_length_s" : 10,
         "init_joint_angles" : np.array([6.25032076, 0.60241784, 3.15709118, -2.128586102, 6.28220792, -0.39995964788322566, 1.55241801, 0.822, 0.822, 0.822, 0.822, 0.822, 0.822]),
         "init_quat" : np.array([1, 0, 0., 1]),
-        "bracelet_link_height=0.25" : 0.25,
+        "bracelet_link_height" : 0.25,
         "init_box_pos" : (0.2, 0.2, 0.02),
         "box_size" : (0.08, 0.08, 0.02),
         "clip_actions" : 0.01,
