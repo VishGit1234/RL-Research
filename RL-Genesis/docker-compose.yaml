@@ -9,9 +9,6 @@ services:
       - NVIDIA_VISIBLE_DEVICES=0    
     # command: tail -f /dev/null
     command: python3 main.py
-    volumes:
-      - ./main.py:/src/main.py
-      - ./images/:/src/images/
     deploy:
       resources:
         reservations:
