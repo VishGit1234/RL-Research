@@ -106,6 +106,10 @@ class KinovaEnv:
         self._reset_idx(torch.arange(self.num_envs, device=gs.device))
         self.scene.step()
 
+        # tanh layer
+        self.tanh = torch.nn.Tanh()
+        self.tanh.to(device=gs.device)
+
     def step(self, actions):
         # Clamp action between bounds
         actions = torch.clip(actions, -self.env_cfg["clip_actions"], self.env_cfg["clip_actions"])
@@ -114,6 +118,10 @@ class KinovaEnv:
         new_pos[:, 0] += actions[:, 0]
         new_pos[:, 1] += actions[:, 1]
         new_pos[:, 2] = self.env_cfg["bracelet_link_height"]
+
+        # Clip new pos to be within bounds of robot
+        new_pos[:, 0] = torch.clip(new_pos[:, 0], -0.5, 0.5)
+        new_pos[:, 1] = torch.clip(new_pos[:, 1], -0.5, 0.5)
         
         # Compute inverse kinematics after applying delta ee pos
         qpos = self.robot.inverse_kinematics(
@@ -137,7 +145,6 @@ class KinovaEnv:
         # check termination and reset
         self.reset_buf = self.episode_length_buf > self.max_episode_length
         self.reset_buf |= torch.norm(self.goal[:2] - self.box.get_pos()[:, :2], dim=1) < self.env_cfg["termination_if_cube_goal_dist_less_than"]
-
 
         time_out_idx = (self.episode_length_buf > self.max_episode_length).nonzero(as_tuple=False).flatten()
         self.info["time_outs"] = torch.zeros_like(self.reset_buf, device=gs.device, dtype=gs.tc_float)
@@ -179,11 +186,14 @@ class KinovaEnv:
     def _get_reward(self):
         cube_goal_dist = torch.norm(self.goal[:2] - self.box.get_pos()[:, :2], dim=1)
         # Note: cube-arm dist doesn't account for width of box yet
-        cube_arm_dist = torch.norm(self.bracelet_link.get_pos()[:, :2] - self.box.get_pos()[:, :2], dim=1)
+        w, z = self.box.get_quat()[:, 0], self.box.get_quat()[:, 3]
+        cube_back_pos = self.box.get_pos()[:, :2] + (self.env_cfg["box_size"][1] / 2)*torch.stack([2*w*z, 2*z**2 - 1], dim=1)
+        cube_arm_dist = torch.norm(self.bracelet_link.get_pos()[:, :2] - cube_back_pos, dim=1)
 
         rew_terms = torch.stack((
-            self.env_cfg["cube_goal_dist_rew_scale"]*cube_goal_dist, 
-            self.env_cfg["cube_arm_dist_rew_scale"]*cube_arm_dist), dim=1)
+            self.env_cfg["cube_goal_dist_rew_scale"]*(1 - self.tanh(5*cube_goal_dist)),
+            self.env_cfg["cube_arm_dist_rew_scale"]*(1 - self.tanh(10*cube_arm_dist))
+        ), dim=1)
 
         assert rew_terms.shape == (self.num_envs, 2)
 
