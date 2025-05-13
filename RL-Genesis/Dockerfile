@@ -18,10 +18,11 @@ RUN apt-get update -y && apt-get install -y \
   libgles2-mesa-dev \
   libosmesa6-dev \
   mesa-utils \
-  python3-pip
+  python3-pip \
+  git
 
 RUN pip install torch --index-url https://download.pytorch.org/whl/cu121 && \
-  pip install genesis-world
+  pip install genesis-world rsl-rl-lib==2.2.4 tensorboard
 
 WORKDIR /src
 

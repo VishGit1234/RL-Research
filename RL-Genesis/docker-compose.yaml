@@ -7,8 +7,12 @@ services:
     environment:
       - CUDA_VISIBLE_DEVICES=0
       - NVIDIA_VISIBLE_DEVICES=0    
-    # command: tail -f /dev/null
-    command: python3 main.py
+    volumes:
+      - ./logs/:/src/logs/
+    command: tail -f /dev/null
+    # command: python3 train.py
+    ports:
+      - "35629:6006"
     deploy:
       resources:
         reservations:

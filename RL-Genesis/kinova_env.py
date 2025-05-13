@@ -37,7 +37,8 @@ class KinovaEnv:
         self.env_cfg = env_cfg
 
         # create scene
-        self.scene = gs.Scene(
+        if show_viewer:
+          self.scene = gs.Scene(
             sim_options=gs.options.SimOptions(dt=self.dt, substeps=2),
             viewer_options=gs.options.ViewerOptions(
                 max_FPS=int(0.5 / self.dt)
@@ -47,7 +48,15 @@ class KinovaEnv:
                 dt=self.dt
             ),
             show_viewer=show_viewer,
-        )
+          )
+        else:
+          self.scene = gs.Scene(
+            sim_options=gs.options.SimOptions(dt=self.dt, substeps=2),
+            rigid_options=gs.options.RigidOptions(
+                dt=self.dt
+            ),
+            show_viewer=show_viewer,
+          )
 
         # add plane
         self.scene.add_entity(
