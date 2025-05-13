@@ -98,7 +98,11 @@ class KinovaEnv:
         self.rew_buf = torch.zeros((self.num_envs,), device=gs.device, dtype=gs.tc_float)
         self.reset_buf = torch.ones((self.num_envs,), device=gs.device, dtype=gs.tc_int)
         self.episode_length_buf = torch.zeros((self.num_envs,), device=gs.device, dtype=gs.tc_int)
-        self.episode_sums = torch.zeros((self.num_envs,), device=gs.device, dtype=gs.tc_float)
+        self.episode_sums = {
+            "cube_goal_dist_rew" : torch.zeros((self.num_envs,), device=gs.device, dtype=gs.tc_float),
+            "cube_arm_dist_rew" : torch.zeros((self.num_envs,), device=gs.device, dtype=gs.tc_float),
+            "success_rew" : torch.zeros((self.num_envs,), device=gs.device, dtype=gs.tc_float),
+        }
         self.info = dict()
         self.info["observations"] = dict() # Only for PPO library
 
@@ -138,9 +142,10 @@ class KinovaEnv:
 
         # compute reward
         self.rew_buf[:] = 0.0
-        rew = self._get_reward()
-        self.rew_buf += rew
-        self.episode_sums += rew
+        rew_terms = self._get_reward()
+        for key in self.episode_sums.keys():
+            self.rew_buf += rew_terms[key]
+            self.episode_sums[key] += rew_terms[key]
 
         # check termination and reset
         self.reset_buf = self.episode_length_buf > self.max_episode_length
@@ -190,18 +195,13 @@ class KinovaEnv:
         cube_back_pos = self.box.get_pos()[:, :2] + (self.env_cfg["box_size"][1] / 2)*torch.stack([2*w*z, 2*z**2 - 1], dim=1)
         cube_arm_dist = torch.norm(self.bracelet_link.get_pos()[:, :2] - cube_back_pos, dim=1)
 
-        rew_terms = torch.stack((
-            self.env_cfg["cube_goal_dist_rew_scale"]*(1 - self.tanh(5*cube_goal_dist)),
-            self.env_cfg["cube_arm_dist_rew_scale"]*(1 - self.tanh(10*cube_arm_dist))
-        ), dim=1)
+        rew_terms = {
+            "cube_goal_dist_rew" : self.env_cfg["cube_goal_dist_rew_scale"]*(1 - self.tanh(5*cube_goal_dist)),
+            "cube_arm_dist_rew" : self.env_cfg["cube_arm_dist_rew_scale"]*(1 - self.tanh(10*cube_arm_dist)),
+            "success_rew" : self.env_cfg["success_reward"]*(cube_goal_dist < self.env_cfg["termination_if_cube_goal_dist_less_than"]).int()
+        }
 
-        assert rew_terms.shape == (self.num_envs, 2)
-
-        rew = torch.sum(rew_terms, dim=1)
-
-        rew += self.env_cfg["success_reward"]*(cube_goal_dist < self.env_cfg["termination_if_cube_goal_dist_less_than"]).int()
-
-        return rew
+        return rew_terms
 
     def _reset_idx(self, envs_idx):
         if len(envs_idx) == 0:
@@ -227,8 +227,9 @@ class KinovaEnv:
 
         # fill info
         self.info["episode"] = {}
-        self.info["episode"]["rew"] = torch.mean(self.episode_sums[envs_idx]).item() / self.env_cfg["episode_length_s"]
-        self.episode_sums[envs_idx] = 0.0
+        for key in self.episode_sums.keys():
+            self.info["episode"][key] = torch.mean(self.episode_sums[key][envs_idx]).item() / self.env_cfg["episode_length_s"]
+            self.episode_sums[key][envs_idx] = 0.0
 
     def reset(self):
         self.reset_buf[:] = True
