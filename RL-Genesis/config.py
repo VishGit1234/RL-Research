@@ -51,10 +51,16 @@ env_cfg = {
     "bracelet_link_height" : 0.25,
     "init_box_pos" : (0.2, 0.2, 0.02),
     "box_size" : (0.08, 0.08, 0.02),
-    "clip_actions" : 0.01,
+    "clip_actions" : 0.005,
     "termination_if_cube_goal_dist_less_than" : 0.01,
-    "cube_goal_dist_rew_scale" : 10,
+    "cube_goal_dist_rew_scale" : 5,
     "cube_arm_dist_rew_scale" : 1,
-    "success_reward" : 200,
+    "success_reward" : 1000,
     "target_displacement" : 0.1
 }  
+
+import torch
+def check_for_nan(tensor):
+    if torch.isnan(tensor).any():
+        raise ValueError("Tensor contains NaN values")
+    return tensor

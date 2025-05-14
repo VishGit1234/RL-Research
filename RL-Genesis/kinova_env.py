@@ -125,21 +125,22 @@ class KinovaEnv:
 
     def step(self, actions):
         # Clamp action between bounds
-        actions = torch.clip(actions, -self.env_cfg["clip_actions"], self.env_cfg["clip_actions"])
+        clipped_actions = torch.clip(actions, -self.env_cfg["clip_actions"], self.env_cfg["clip_actions"])
 
         new_pos = self.bracelet_link.get_pos()
-        new_pos[:, 0] += actions[:, 0]
-        new_pos[:, 1] += actions[:, 1]
+        new_pos[:, 0] += clipped_actions[:, 0]
+        new_pos[:, 1] += clipped_actions[:, 1]
         new_pos[:, 2] = self.env_cfg["bracelet_link_height"]
 
         # Clip new pos to be within bounds of robot
-        new_pos[:, 0] = torch.clip(new_pos[:, 0], -0.5, 0.5)
-        new_pos[:, 1] = torch.clip(new_pos[:, 1], -0.5, 0.5)
+        clipped_new_pos = new_pos.clone()
+        clipped_new_pos[:, 0] = torch.clip(new_pos[:, 0], -0.5, 0.5)
+        clipped_new_pos[:, 1] = torch.clip(new_pos[:, 1], -0.5, 0.5)
         
         # Compute inverse kinematics after applying delta ee pos
         qpos = self.robot.inverse_kinematics(
             link = self.bracelet_link,
-            pos  = new_pos,
+            pos  = clipped_new_pos,
             quat = self.ee_init_quat.unsqueeze(dim=0).repeat(self.num_envs, 1),
         )
         qpos[:,-6:] = 0.822 # Keep gripper closed
@@ -158,7 +159,14 @@ class KinovaEnv:
 
         # check termination and reset
         self.reset_buf = self.episode_length_buf > self.max_episode_length
+        # terminate if box is at goal
         self.reset_buf |= torch.norm(self.goal[:2] - self.box.get_pos()[:, :2], dim=1) < self.env_cfg["termination_if_cube_goal_dist_less_than"]
+        # terminate if robot is out of bounds
+        self.reset_buf |= (torch.abs(new_pos[:, 0]) > 0.5)
+        self.reset_buf |= (torch.abs(new_pos[:, 1]) > 0.5)
+        # terminate if action is out of bounds
+        self.reset_buf |= (torch.abs(clipped_actions[:, 0]) > self.env_cfg["clip_actions"])
+        self.reset_buf |= (torch.abs(clipped_actions[:, 1]) > self.env_cfg["clip_actions"])
 
         time_out_idx = (self.episode_length_buf > self.max_episode_length).nonzero(as_tuple=False).flatten()
         self.info["time_outs"] = torch.zeros_like(self.reset_buf, device=gs.device, dtype=gs.tc_float)
@@ -204,10 +212,13 @@ class KinovaEnv:
         cube_back_pos = self.box.get_pos()[:, :2] + (self.env_cfg["box_size"][1] / 2)*torch.stack([2*w*z, 2*z**2 - 1], dim=1)
         cube_arm_dist = torch.norm(self.bracelet_link.get_pos()[:, :2] - cube_back_pos, dim=1)
 
+        success = (cube_goal_dist < self.env_cfg["termination_if_cube_goal_dist_less_than"]).int()       
+
+        # reward terms
         rew_terms = {
             "cube_goal_dist_rew" : self.env_cfg["cube_goal_dist_rew_scale"]*(1 - self.tanh(5*cube_goal_dist)),
             "cube_arm_dist_rew" : self.env_cfg["cube_arm_dist_rew_scale"]*(1 - self.tanh(10*cube_arm_dist)),
-            "success_rew" : self.env_cfg["success_reward"]*(cube_goal_dist < self.env_cfg["termination_if_cube_goal_dist_less_than"]).int()
+            "success_rew" : self.env_cfg["success_reward"]*success*(1 - self.episode_length_buf/self.max_episode_length),
         }
 
         return rew_terms
