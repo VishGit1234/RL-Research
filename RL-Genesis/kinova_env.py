@@ -22,6 +22,7 @@ class KinovaEnv:
                 - "cube_arm_dist_rew_scale"  (float): Scaling factor for the cube-arm distance reward term.
                 - "success_reward" (int):     Reward given when the task is successful.
                 - "target_displacement" (float): Amount to move box in y-axis 
+                - "action_scale" (float): Scaling factor for actions.
             show_viewer (bool, optional): Whether to display a viewer. Defaults to False.
         """
 
@@ -125,7 +126,7 @@ class KinovaEnv:
 
     def step(self, actions):
         # Clamp action between bounds
-        clipped_actions = torch.clip(actions, -self.env_cfg["clip_actions"], self.env_cfg["clip_actions"])
+        clipped_actions = torch.clip(self.env_cfg["action_scale"]*actions, -self.env_cfg["clip_actions"], self.env_cfg["clip_actions"])
 
         new_pos = self.bracelet_link.get_pos()
         new_pos[:, 0] += clipped_actions[:, 0]
@@ -168,12 +169,12 @@ class KinovaEnv:
         self.reset_buf |= (torch.abs(clipped_actions[:, 0]) > self.env_cfg["clip_actions"])
         self.reset_buf |= (torch.abs(clipped_actions[:, 1]) > self.env_cfg["clip_actions"])
 
-        time_out_idx = (self.episode_length_buf > self.max_episode_length).nonzero(as_tuple=False).flatten()
+        time_out_idx = torch.flatten(torch.nonzero(self.episode_length_buf > self.max_episode_length, as_tuple=False).nonzero(as_tuple=False))
         self.info["time_outs"] = torch.zeros_like(self.reset_buf, device=gs.device, dtype=gs.tc_float)
         self.info["time_outs"][time_out_idx] = 1.0
         
         # Reset environments that have terminated
-        self._reset_idx(self.reset_buf.nonzero(as_tuple=False).flatten())
+        self._reset_idx(torch.flatten(torch.nonzero(self.reset_buf, as_tuple=False)))
 
         # compute observations
         self.obs_buf = self._get_observation()
@@ -248,7 +249,10 @@ class KinovaEnv:
         # fill info
         self.info["episode"] = {}
         for key in self.episode_sums.keys():
-            self.info["episode"][key] = torch.mean(self.episode_sums[key][envs_idx]).item() / self.env_cfg["episode_length_s"]
+            if key == "success_rew":
+                self.info["episode"]["success_pct"] = 100*torch.sum(self.episode_sums[key][envs_idx]).item() / (self.env_cfg["success_reward"]*envs_idx.size(0))
+            else:
+                self.info["episode"][key] = torch.mean(self.episode_sums[key][envs_idx]).item() / self.env_cfg["episode_length_s"]
             self.episode_sums[key][envs_idx] = 0.0
 
     def reset(self):

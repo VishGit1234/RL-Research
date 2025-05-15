@@ -53,10 +53,11 @@ env_cfg = {
     "box_size" : (0.08, 0.08, 0.02),
     "clip_actions" : 0.005,
     "termination_if_cube_goal_dist_less_than" : 0.01,
-    "cube_goal_dist_rew_scale" : 5,
+    "cube_goal_dist_rew_scale" : 2,
     "cube_arm_dist_rew_scale" : 1,
     "success_reward" : 1000,
-    "target_displacement" : 0.1
+    "target_displacement" : 0.1,
+    "action_scale" : 0.01,
 }  
 
 import torch
