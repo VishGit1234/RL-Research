@@ -1,10 +1,10 @@
 import numpy as np
 
-MAX_ITERATIONS = 200
+MAX_ITERATIONS = 100
 train_cfg = {
     "algorithm": {
         "class_name": "PPO",
-        "clip_param": 0.2,
+        "clip_param": 0.1,
         "desired_kl": 0.01,
         "entropy_coef": 0.01,
         "gamma": 0.99,
@@ -20,8 +20,8 @@ train_cfg = {
     "init_member_classes": {},
     "policy": {
         "activation": "elu",
-        "actor_hidden_dims": [512, 256, 128],
-        "critic_hidden_dims": [512, 256, 128],
+        "actor_hidden_dims": [128, 128],
+        "critic_hidden_dims": [128, 128],
         "init_noise_std": 1.0,
         "class_name": "ActorCritic",
         "noise_std_type": "log"
@@ -39,24 +39,24 @@ train_cfg = {
     },
     "runner_class_name": "OnPolicyRunner",
     "num_steps_per_env": 24,
-    "save_interval": 100,
+    "save_interval": 50,
     "empirical_normalization": None,
-    "seed": 1,
+    "seed": 23,
 }
 
 env_cfg = {
     "episode_length_s" : 10,
-    "init_joint_angles" : np.array([6.25032076, 0.60241784, 3.15709118, -2.128586102, 6.28220792, -0.39995964788322566, 1.55241801, 0.822, 0.822, 0.822, 0.822, 0.822, 0.822]),
+    "init_joint_angles" : np.array([6.25032076, 0.60241784, 3.15709118, -2.128586102, 6.28220792, -0.39995964788322566, 0, 0.822, 0.822, 0.822, 0.822, 0.822, 0.822]),
     "init_quat" : np.array([1, 0, 0., 1]),
     "bracelet_link_height" : 0.25,
     "init_box_pos" : (0.2, 0.2, 0.02),
     "box_size" : (0.08, 0.08, 0.02),
-    "clip_actions" : 0.005,
+    "clip_actions" : 0.01,
     "termination_if_cube_goal_dist_less_than" : 0.01,
-    "cube_goal_dist_rew_scale" : 2,
-    "cube_arm_dist_rew_scale" : 1,
-    "success_reward" : 1000,
-    "target_displacement" : 0.1,
+    "cube_goal_dist_rew_scale" : 10,
+    "cube_arm_dist_rew_scale" : 10,
+    "success_reward" : 1,
+    "target_displacement" : 0.3,
     "action_scale" : 0.01,
 }  
 

@@ -4,6 +4,7 @@ import numpy as np
 import os, pickle
 from kinova_env import KinovaEnv
 from config import env_cfg, train_cfg, MAX_ITERATIONS
+import torch
 
 def eval():
     NUM_ENVS=3
@@ -22,7 +23,7 @@ def eval():
     )
 
     runner = OnPolicyRunner(env, train_cfg, log_dir, device=gs.device)
-    runner.load(os.path.join(log_dir, "model_100.pt"))
+    runner.load(os.path.join(log_dir, "model_99.pt"))
 
     policy = runner.get_inference_policy()
 
@@ -30,6 +31,7 @@ def eval():
     for i in range(10000):
         action = policy(obs)
         obs, reward, done, info = env.step(actions=action)
+        # print(torch.mean(reward).item())  
 
 if __name__ == "__main__":
     eval()

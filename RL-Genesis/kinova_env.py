@@ -216,10 +216,19 @@ class KinovaEnv:
         success = (cube_goal_dist < self.env_cfg["termination_if_cube_goal_dist_less_than"]).int()       
 
         # reward terms
+        INIT_CUBE_ARM_DIST = 0.2
         rew_terms = {
-            "cube_goal_dist_rew" : self.env_cfg["cube_goal_dist_rew_scale"]*(1 - self.tanh(5*cube_goal_dist)),
-            "cube_arm_dist_rew" : self.env_cfg["cube_arm_dist_rew_scale"]*(1 - self.tanh(10*cube_arm_dist)),
-            "success_rew" : self.env_cfg["success_reward"]*success*(1 - self.episode_length_buf/self.max_episode_length),
+            "cube_goal_dist_rew": torch.where(
+                cube_goal_dist > 0.1,
+                self.env_cfg["target_displacement"]*self.env_cfg["cube_goal_dist_rew_scale"] - self.env_cfg["cube_goal_dist_rew_scale"]*cube_goal_dist,
+                (self.env_cfg["target_displacement"]*self.env_cfg["cube_goal_dist_rew_scale"] - self.env_cfg["cube_goal_dist_rew_scale"]*cube_goal_dist)/10
+            ),
+            "cube_arm_dist_rew": torch.where(
+                cube_arm_dist > INIT_CUBE_ARM_DIST,
+                INIT_CUBE_ARM_DIST*self.env_cfg["cube_arm_dist_rew_scale"] - self.env_cfg["cube_arm_dist_rew_scale"]*cube_arm_dist,
+                (INIT_CUBE_ARM_DIST*self.env_cfg["cube_arm_dist_rew_scale"] - self.env_cfg["cube_arm_dist_rew_scale"]*cube_arm_dist)/10
+            ),
+            "success_rew" : self.env_cfg["success_reward"]*success,
         }
 
         return rew_terms
@@ -250,7 +259,7 @@ class KinovaEnv:
         self.info["episode"] = {}
         for key in self.episode_sums.keys():
             if key == "success_rew":
-                self.info["episode"]["success_pct"] = 100*torch.sum(self.episode_sums[key][envs_idx]).item() / (self.env_cfg["success_reward"]*envs_idx.size(0))
+                self.info["episode"]["success_pct"] = 100*torch.sum((self.episode_sums[key][envs_idx] > 0).int()).item() / (envs_idx.size(0))
             else:
                 self.info["episode"][key] = torch.mean(self.episode_sums[key][envs_idx]).item() / self.env_cfg["episode_length_s"]
             self.episode_sums[key][envs_idx] = 0.0
