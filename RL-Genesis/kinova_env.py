@@ -264,9 +264,15 @@ class KinovaEnv:
             envs_idx=envs_idx
         )
 
+        self.box.set_quat(
+            quat=torch.tensor([1,0,0,0]).unsqueeze(dim=0).repeat(len(envs_idx), 1),
+            zero_velocity=True,
+            envs_idx=envs_idx
+        )
+
         # reset buffers
         self.episode_length_buf[envs_idx] = 0
-        self.reset_buf[envs_idx] = True
+        # self.reset_buf[envs_idx] = True
 
         # fill info
         self.info["episode"] = {}
@@ -276,7 +282,6 @@ class KinovaEnv:
         self.info["episode"]["success_pct"] = 100*torch.mean(self.success[envs_idx]).item()
 
     def reset(self):
-        self.reset_buf[:] = True
         self._reset_idx(torch.arange(self.num_envs, device=gs.device))
         self.obs_buf = self._get_observation()
         return self.obs_buf, None
