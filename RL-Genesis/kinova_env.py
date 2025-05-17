@@ -28,7 +28,7 @@ class KinovaEnv:
 
         self.num_envs = num_envs
         self.num_obs = 10 # no. of dimensions in observation space 
-        self.num_actions = 3 # no. of dims in action space
+        self.num_actions = 2 # no. of dims in action space
 
         self.device = gs.device
 
@@ -50,6 +50,13 @@ class KinovaEnv:
             ),
             show_viewer=show_viewer,
           )
+        #   self.cam = self.scene.add_camera(
+        #         res=(640, 480),
+        #         pos=(3.5, 0.5, 2.5),
+        #         lookat=(0, 0, 0.5),
+        #         up=(0, 0, 1),
+        #         fov=40
+        #   )
         else:
           self.scene = gs.Scene(
             sim_options=gs.options.SimOptions(dt=self.dt, substeps=2),
@@ -80,6 +87,9 @@ class KinovaEnv:
                 rho=400, # 400 kg/m^3 -> density of some types of wood
                 friction=None
             ), # The params here can be used for domain randomization
+            gs.surfaces.Default(
+                color=(196, 30, 58) # make block red
+            )
         )
 
         # add robot
@@ -101,7 +111,7 @@ class KinovaEnv:
         )
 
         # build
-        self.scene.build(n_envs=num_envs, env_spacing=(2.0, 2.0))
+        self.scene.build(n_envs=num_envs)
 
         # buffers
         self.obs_buf = torch.zeros((self.num_envs, self.num_obs), device=gs.device, dtype=gs.tc_float)
@@ -115,6 +125,7 @@ class KinovaEnv:
         }
         self.info = dict()
         self.info["observations"] = dict() # Only for PPO library
+        self.success = torch.zeros((self.num_envs,), device=gs.device, dtype=gs.tc_float)
 
         # set to initial state
         self._reset_idx(torch.arange(self.num_envs, device=gs.device))
@@ -159,9 +170,11 @@ class KinovaEnv:
             self.episode_sums[key] += rew_terms[key]
 
         # check termination and reset
-        self.reset_buf = self.episode_length_buf > self.max_episode_length
         # terminate if box is at goal
-        self.reset_buf |= torch.norm(self.goal[:2] - self.box.get_pos()[:, :2], dim=1) < self.env_cfg["termination_if_cube_goal_dist_less_than"]
+        self.reset_buf = torch.norm(self.goal[:2] - self.box.get_pos()[:, :2], dim=1) < self.env_cfg["termination_if_cube_goal_dist_less_than"]
+        self.success[:] = self.reset_buf.int()
+        # terminate if episode length is reached
+        self.reset_buf |= self.episode_length_buf > self.max_episode_length
         # terminate if robot is out of bounds
         self.reset_buf |= (torch.abs(new_pos[:, 0]) > 0.5)
         self.reset_buf |= (torch.abs(new_pos[:, 1]) > 0.5)
@@ -258,11 +271,9 @@ class KinovaEnv:
         # fill info
         self.info["episode"] = {}
         for key in self.episode_sums.keys():
-            if key == "success_rew":
-                self.info["episode"]["success_pct"] = 100*torch.sum((self.episode_sums[key][envs_idx] > 0).int()).item() / (envs_idx.size(0))
-            else:
-                self.info["episode"][key] = torch.mean(self.episode_sums[key][envs_idx]).item() / self.env_cfg["episode_length_s"]
+            self.info["episode"][key] = torch.mean(self.episode_sums[key][envs_idx]).item() # / self.env_cfg["episode_length_s"]
             self.episode_sums[key][envs_idx] = 0.0
+        self.info["episode"]["success_pct"] = 100*torch.mean(self.success[envs_idx]).item()
 
     def reset(self):
         self.reset_buf[:] = True
