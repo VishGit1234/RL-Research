@@ -88,7 +88,7 @@ class KinovaEnv:
                 friction=None
             ), # The params here can be used for domain randomization
             gs.surfaces.Default(
-                color=(196, 30, 58) # make block red
+                color=(196/255, 30/255, 58/255) # make block red
             )
         )
 
