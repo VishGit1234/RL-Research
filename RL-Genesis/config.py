@@ -55,7 +55,7 @@ env_cfg = {
     "termination_if_cube_goal_dist_less_than" : 0.01,
     "cube_goal_dist_rew_scale" : 10,
     "cube_arm_dist_rew_scale" : 10,
-    "success_reward" : 1,
+    "success_reward" : 10,
     "target_displacement" : 0.3,
     "action_scale" : 0.01,
 }  
