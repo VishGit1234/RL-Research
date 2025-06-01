@@ -2,7 +2,8 @@ import genesis as gs
 from rsl_rl.runners import OnPolicyRunner
 import os, shutil, pickle
 from kinova_env import KinovaEnv
-from config import env_cfg, train_cfg, MAX_ITERATIONS
+from kinova_env_opt import KinovaEnvOpt
+from config import env_cfg, train_cfg, MAX_ITERATIONS, Struct
 
 
 def train():
@@ -20,10 +21,9 @@ def train():
         [env_cfg, train_cfg],
         open(f"{log_dir}/cfgs.pkl", "wb"),
     )
-
-    env = KinovaEnv(
+    env = KinovaEnvOpt(
         num_envs=NUM_ENVS,
-        env_cfg=env_cfg,
+        env_cfg=Struct(**env_cfg),
         show_viewer=False
     )
 

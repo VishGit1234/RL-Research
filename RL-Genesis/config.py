@@ -45,7 +45,7 @@ train_cfg = {
 }
 
 env_cfg = {
-    "episode_length_s" : 5,
+    "episode_length_s" : 2,
     "init_joint_angles" : np.array([6.9761, 1.1129, 1.7474, -2.2817, 7.5884, -1.1489, 1.6530, 0.8213, 0.8200, 0.8209, 0.8208, 0.8217, 0.8210]),
     "init_quat" : np.array([0, 0, 0., 1]),
     "bracelet_link_height" : 0.25,
@@ -58,7 +58,12 @@ env_cfg = {
     "success_reward" : 10,
     "target_displacement" : 0.3,
     "action_scale" : 0.01,
+    "robot_mjcf_file" : ".\kinova_gen3\gen3.xml",
 }  
+
+class Struct:
+    def __init__(self, **entries):
+        self.__dict__.update(entries)
 
 import torch
 def check_for_nan(tensor):

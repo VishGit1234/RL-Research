@@ -2,30 +2,8 @@ import torch
 import math
 import genesis as gs
 
-class KinovaEnv:
+class KinovaEnvOpt:
     def __init__(self, num_envs, env_cfg, show_viewer=False):
-        """
-        Initializes the KinovaEnv environment.
-
-        Args:
-            num_envs (int): Number of parallel environments.
-            env_cfg (dict): Configuration dictionary for environment settings.  Contains the following keys:
-                - "episode_length_s" (int): Duration of each episode in seconds.
-                - "init_box_pos" (array): Initial position of the box.
-                - "box_size" (tuple): Size of the box.
-                - "init_joint_angles" (array):  Initial joint angles of the robot.
-                - "bracelet_link_height" (float): Height to keep bracelet link at
-                - "init_quat" (array):          Initial orientation (quaternion) of the end-effector.
-                - "clip_actions" (float):     Maximum absolute value for actions.
-                - "termination_if_cube_goal_dist_less_than" (float): Distance threshold for episode termination.
-                - "cube_goal_dist_rew_scale" (float): Scaling factor for the cube-goal distance reward term.
-                - "cube_arm_dist_rew_scale"  (float): Scaling factor for the cube-arm distance reward term.
-                - "success_reward" (int):     Reward given when the task is successful.
-                - "target_displacement" (float): Amount to move box in y-axis 
-                - "action_scale" (float): Scaling factor for actions.
-            show_viewer (bool, optional): Whether to display a viewer. Defaults to False.
-        """
-
         self.num_envs = num_envs
         self.num_obs = 10 # no. of dimensions in observation space 
         self.num_actions = 2 # no. of dims in action space
@@ -139,24 +117,21 @@ class KinovaEnv:
     def step(self, actions):
         # Clamp action between bounds
         clipped_actions = torch.clip(self.env_cfg.action_scale*actions, -self.env_cfg.clip_actions, self.env_cfg.clip_actions)
-        new_pos = self.bracelet_link.get_pos()
+
+        cur_pos = self.bracelet_link.get_pos()
+        new_pos = cur_pos.clone()
         new_pos[:, 0] += clipped_actions[:, 0]
         new_pos[:, 1] += clipped_actions[:, 1]
         new_pos[:, 2] = self.env_cfg.bracelet_link_height
+        target_vel = (new_pos - cur_pos)/self.dt
+        target_vel = torch.cat((target_vel, torch.zeros((self.num_envs, 3), device=gs.device, dtype=gs.tc_float)), dim=1)
 
-        # Clip new pos to be within bounds of robot
-        clipped_new_pos = new_pos.clone()
-        clipped_new_pos[:, 0] = torch.clip(new_pos[:, 0], -0.5, 0.5)
-        clipped_new_pos[:, 1] = torch.clip(new_pos[:, 1], -0.5, 0.5)
-        
-        # Compute inverse kinematics after applying delta ee pos
-        qpos = self.robot.inverse_kinematics(
-            link = self.bracelet_link,
-            pos  = clipped_new_pos,
-            quat = self.ee_init_quat.unsqueeze(dim=0).repeat(self.num_envs, 1),
-        )
-        qpos[:,-6:] = 0.822 # Keep gripper closed
-        self.robot.control_dofs_position(qpos)
+        jac = self.robot.get_jacobian(self.bracelet_link)
+        # Compute delta ee vel
+        qvel = torch.bmm(torch.linalg.pinv(jac), target_vel.unsqueeze(dim=-1)).squeeze(dim=-1)
+        # Set gripper velocity to zero
+        qvel[:, -6:] = 0.0 # Keep gripper closed
+        self.robot.control_dofs_velocity(qvel)
         self.scene.step()
 
         # increment episode length
@@ -293,7 +268,7 @@ class KinovaEnv:
     def reset(self):
         self._reset_idx(torch.arange(self.num_envs, device=gs.device))
         self.obs_buf = self._get_observation()
-        return self.obs_buf
+        return self.obs_buf, self.info
 
     def rand_act(self):
         return 2*torch.rand((self.num_envs, self.num_actions), device=gs.device, dtype=gs.tc_float) - 1
