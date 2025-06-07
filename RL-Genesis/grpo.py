@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 from torch.distributions import Normal
-from kinova_env import KinovaEnv
-from config import env_cfg
+from kinova_env_opt import KinovaEnvOpt
+from config import env_cfg, Struct
 import genesis as gs
 
 class Policy(nn.Module):
@@ -27,14 +27,14 @@ class Policy(nn.Module):
 
 
 class GRPO():
-    def __init__(self, env: KinovaEnv, obs_dim, action_dim):
+    def __init__(self, env: KinovaEnvOpt, obs_dim, action_dim):
         self.env = env
         self.num_envs = env.num_envs
         self.obs_dim = obs_dim
         self.action_dim = action_dim
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.policy: Policy = Policy(obs_dim, action_dim).to(self.device)
-        self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=1e-3)
+        self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=1e-2)
 
     def rollout(self):
         obs, _ = self.env.reset()
@@ -62,13 +62,12 @@ class GRPO():
         return self.policy.act(obs)
 
     def compute_loss(self, obs, old_log_probs, advantages):
-        new_actions, new_log_probs = self.act(obs)
-        ratio = (new_log_probs - old_log_probs).exp()
-        print(ratio.shape, advantages.shape)
-        surrogate_loss = ratio * advantages
-        clipped_surrogate_loss = torch.clamp(ratio, 0.8, 1.2) * advantages
-        loss = -torch.min(surrogate_loss, clipped_surrogate_loss).mean()
-        return loss
+        new_actions, new_log_probs = self.act(obs.view(-1, self.obs_dim))
+        ratio = (new_log_probs.view(self.num_envs, -1, self.action_dim)- old_log_probs).exp()
+        surrogate_loss = ratio * advantages.view(self.num_envs, 1, 1)
+        clipped_surrogate_loss = torch.clamp(ratio, 0.8, 1.2) * advantages.view(self.num_envs, 1, 1)
+        loss = torch.min(surrogate_loss, clipped_surrogate_loss).mean() - 0.001 * new_log_probs.mean()  # Entropy regularization
+        return -loss
 
     def compute_advantages(self, rewards):
         return (rewards - rewards.mean()) / (rewards.std() + 1e-6)
@@ -80,22 +79,20 @@ class GRPO():
                 obs, actions, rewards, log_probs = self.rollout()
                 # Compute advantages
                 advantages = self.compute_advantages(rewards)
-            print(actions.shape, rewards.shape, log_probs.shape, advantages.shape)
-            break
             for i in range(num_iterations):
                 # Update policy
                 loss = self.compute_loss(obs, log_probs, advantages)
                 self.policy.zero_grad()
                 loss.backward()
                 self.optimizer.step()
-            break
+            print(f"Epoch {epoch + 1}/{num_epochs}, Loss: {loss.item():.4f}, Reward: {rewards.mean().item():.4f}")
 
 if __name__ == "__main__":
-    gs.init(backend=gs.gpu, logging_level="info")
+    gs.init(backend=gs.gpu, logging_level="warn")
     env_cfg["episode_length_s"] = 1
-    env = KinovaEnv(num_envs=4, env_cfg=env_cfg, show_viewer=False)
+    env = KinovaEnvOpt(num_envs=1024, env_cfg=Struct(**env_cfg), show_viewer=True)
     obs_dim = env.num_obs
     action_dim = env.num_actions
 
     grpo = GRPO(env, obs_dim, action_dim)
-    grpo.train(num_epochs=10)
+    grpo.train(num_epochs=100, num_iterations=10)
