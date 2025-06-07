@@ -28,10 +28,13 @@ def eval():
     policy = runner.get_inference_policy()
 
     obs, _ = env.reset()
-    for i in range(10000):
+    # env.cam.start_recording()
+    for i in range(int(env_cfg["episode_length_s"] / env.dt)):
         action = policy(obs)
         obs, reward, done, info = env.step(actions=action)
+        # env.cam.render()
         # print(torch.mean(reward).item())  
+    # env.cam.stop_recording(save_to_filename=os.path.join("logs", "video.mp4"))
 
 if __name__ == "__main__":
     eval()
