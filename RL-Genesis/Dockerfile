@@ -22,8 +22,10 @@ RUN apt-get update -y && apt-get install -y \
   git
 
 RUN pip install torch --index-url https://download.pytorch.org/whl/cu121 && \
-  pip install genesis-world rsl-rl-lib==2.2.4 tensorboard
+  pip install libigl==2.5.1 genesis-world rsl-rl-lib tensorboard optuna
 
 WORKDIR /src
 
 COPY . /src
+
+RUN cp ./rl_rsl_ppo.py /usr/local/lib/python3.10/dist-packages/rsl_rl/algorithms/ppo.py
