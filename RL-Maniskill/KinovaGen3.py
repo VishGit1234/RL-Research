@@ -58,6 +58,15 @@ class KinovaGen3(BaseAgent):
     gripper_stiffness = 1e3
     gripper_damping = 1e2
     gripper_force_limit = 100
+    
+    keyframes = dict(
+        rest=Keyframe(
+            qpos=np.array(
+                [1.6530, -1.1489, 7.5884, -2.2817, 1.7474, 1.1129, 6.9761, 0.8213, 0.8200, 0.8209, 0.8208, 0.8217, 0.8210]
+            ),
+            pose=sapien.Pose(),
+        )
+    )
 
     @property
     def _controller_configs(
