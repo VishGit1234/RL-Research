@@ -1,0 +1,11 @@
+name: maniskill # This will become the name of your environment
+channels: 
+  - conda-forge
+dependencies: # The list of packages to include in your environment
+    - python=3.10 # You can specify versions
+    - pinocchio
+    - pip # Install pip in your environment
+    - pip: # Include pip dependencies last
+        - mani_skill
+        - torch
+        - --extra-index-url https://download.pytorch.org/whl/cu126
