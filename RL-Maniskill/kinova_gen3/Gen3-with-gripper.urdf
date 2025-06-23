@@ -236,30 +236,6 @@
       <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0" />
     </inertial>
   </link>
-  <joint name="end_effector" type="fixed">
-    <origin xyz="0 0 -0.0615250000000001" rpy="3.14159265358979 1.09937075168372E-32 0" />
-    <parent link="bracelet_link" />
-    <child link="end_effector_link" />
-    <axis xyz="0 0 0" />
-  </joint>
-  <link name="camera_link" />
-  <joint name="camera_module" type="fixed">
-    <origin xyz="0 0.05639 -0.00305" rpy="3.14159265358979 3.14159265358979 0" />
-    <parent link="end_effector_link" />
-    <child  link="camera_link" />
-  </joint>
-  <link name="camera_depth_frame" />
-  <joint name="depth_module" type="fixed">
-    <origin xyz="0.0275 0.066 -0.00305" rpy="3.14159265358979 3.14159265358979 0" />
-    <parent link="end_effector_link" />
-    <child  link="camera_depth_frame" />
-  </joint>
-  <link name="camera_color_frame" />
-  <joint name="color_module" type="fixed">
-    <origin xyz="0 0.05639 -0.00305" rpy="3.14159265358979 3.14159265358979 0" />
-    <parent link="end_effector_link" />
-    <child  link="camera_color_frame" />
-  </joint>
 
 
   <link name="robotiq_arg2f_base_link">
@@ -526,5 +502,32 @@
     <parent link="bracelet_link"/>
     <child link="robotiq_arg2f_base_link"/>
     <origin xyz="0 0 -0.06" rpy="3.14159265359 0 1.57079633"/>  
+  </joint>
+
+  <!-- End effector position -->
+  <joint name="end_effector" type="fixed">
+    <!-- The -z below was manually adjusted to be where the gripper would grip (so might be a bit off) -->
+    <origin xyz="0 0 -0.22" rpy="3.14159265358979 1.09937075168372E-32 0" />
+    <parent link="bracelet_link" />
+    <child link="end_effector_link" />
+    <axis xyz="0 0 0" />
+  </joint>
+  <link name="camera_link" />
+  <joint name="camera_module" type="fixed">
+    <origin xyz="0 0.05639 -0.00305" rpy="3.14159265358979 3.14159265358979 0" />
+    <parent link="end_effector_link" />
+    <child  link="camera_link" />
+  </joint>
+  <link name="camera_depth_frame" />
+  <joint name="depth_module" type="fixed">
+    <origin xyz="0.0275 0.066 -0.00305" rpy="3.14159265358979 3.14159265358979 0" />
+    <parent link="end_effector_link" />
+    <child  link="camera_depth_frame" />
+  </joint>
+  <link name="camera_color_frame" />
+  <joint name="color_module" type="fixed">
+    <origin xyz="0 0.05639 -0.00305" rpy="3.14159265358979 3.14159265358979 0" />
+    <parent link="end_effector_link" />
+    <child  link="camera_color_frame" />
   </joint>
 </robot>

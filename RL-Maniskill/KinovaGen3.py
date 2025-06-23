@@ -2,21 +2,23 @@ from typing import Dict, Union
 
 import numpy as np
 import sapien
-from transforms3d.euler import euler2quat
+import torch
 
-from mani_skill import ASSET_DIR, PACKAGE_ASSET_DIR
 from mani_skill.agents.base_agent import BaseAgent, DictControllerConfig, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.controllers.base_controller import ControllerConfig
 from mani_skill.agents.registration import register_agent
-from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils import sapien_utils
+from mani_skill.utils import common, sapien_utils
+# from mani_skill.sensors.camera import CameraConfig
+from mani_skill.utils.structs.actor import Actor
+
+import os
 
 
 @register_agent()
 class KinovaGen3(BaseAgent):
     uid = "kinova_gen3"
-    urdf_path = f".\\kinova_gen3\\Gen3-with-gripper.urdf"
+    urdf_path = os.path.join(os.path.dirname(__file__), "kinova_gen3", "Gen3-with-gripper.urdf")
     disable_self_collisions = True
     urdf_config = dict(
         _materials=dict(
@@ -62,11 +64,26 @@ class KinovaGen3(BaseAgent):
     keyframes = dict(
         rest=Keyframe(
             qpos=np.array(
-                [6.9761, 1.1129, 1.7474, -2.2817, 7.5884, -1.1489, 1.6530, 0.8213, 0.8200, 0.8209, 0.8208, 0.8217, 0.8210]
+                [0.6961, 1.1129, 1.7474, -2.2817, 1.3084, -1.1489, 3.1415, 0.8213, 0.8200, 0.8209, 0.8208, 0.8217, 0.8210]
             ),
             pose=sapien.Pose(),
         )
     )
+
+    # @property
+    # def _sensor_configs(self):
+    #     return [
+    #         CameraConfig(
+    #             uid="mounted_camera",
+    #             pose=sapien.Pose(p=[0, -0.06, -0.06], q=[0.70710678, 0, 0.70710678, 0]),  # 90 deg about y axis
+    #             width=1280,
+    #             height=720,
+    #             fov=1.13446, # 65 degrees
+    #             near=0.01,
+    #             far=100,
+    #             mount=self.robot.links_map["bracelet_link"],
+    #         )
+    #     ]
 
     @property
     def _controller_configs(
@@ -178,10 +195,60 @@ class KinovaGen3(BaseAgent):
         left_drive.set_limit_z(0, 0)
 
     def _after_init(self):
+        self.finger1_link = sapien_utils.get_obj_by_name(
+            self.robot.get_links(), "left_inner_finger"
+        )
+        self.finger2_link = sapien_utils.get_obj_by_name(
+            self.robot.get_links(), "right_inner_finger"
+        )
+        self.finger1pad_link = sapien_utils.get_obj_by_name(
+            self.robot.get_links(), "left_inner_finger_pad"
+        )
+        self.finger2pad_link = sapien_utils.get_obj_by_name(
+            self.robot.get_links(), "right_inner_finger_pad"
+        )
         self.tcp = sapien_utils.get_obj_by_name(
             self.robot.get_links(), self.ee_link_name
         )
+    
+    def is_grasping(self, object: Actor, min_force=0.5, max_angle=85):
+        """Check if the robot is grasping an object
 
-# import mani_skill.examples.demo_robot as demo_robot_script
+        Args:
+            object (Actor): The object to check if the robot is grasping
+            min_force (float, optional): Minimum force before the robot is considered to be grasping the object in Newtons. Defaults to 0.5.
+            max_angle (int, optional): Maximum angle of contact to consider grasping. Defaults to 85.
+        """
+        l_contact_forces = self.scene.get_pairwise_contact_forces(
+            self.finger1_link, object
+        )
+        r_contact_forces = self.scene.get_pairwise_contact_forces(
+            self.finger2_link, object
+        )
+        lforce = torch.linalg.norm(l_contact_forces, axis=1)
+        rforce = torch.linalg.norm(r_contact_forces, axis=1)
 
-# demo_robot_script.main()
+        # direction to open the gripper
+        ldirection = self.finger1_link.pose.to_transformation_matrix()[..., :3, 1]
+        rdirection = -self.finger2_link.pose.to_transformation_matrix()[..., :3, 1]
+        langle = common.compute_angle_between(ldirection, l_contact_forces)
+        rangle = common.compute_angle_between(rdirection, r_contact_forces)
+        lflag = torch.logical_and(
+            lforce >= min_force, torch.rad2deg(langle) <= max_angle
+        )
+        rflag = torch.logical_and(
+            rforce >= min_force, torch.rad2deg(rangle) <= max_angle
+        )
+        return torch.logical_and(lflag, rflag)
+
+    def is_static(self, threshold: float = 0.2):
+        qvel = self.robot.get_qvel()[..., :-2]
+        return torch.max(torch.abs(qvel), 1)[0] <= threshold
+    
+    @property
+    def tcp_pos(self):
+        return self.tcp.pose.p
+
+    @property
+    def tcp_pose(self):
+        return self.tcp.pose
